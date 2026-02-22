@@ -1,0 +1,45 @@
+{
+  "_descripcion": "Factores para cálculo de pensión Ley 73",
+  "_fuente": "Ley del Seguro Social 1973",
+  "_ultima_actualizacion": "2025-01-01",
+  "factores_edad": {
+    "_descripcion": "Porcentaje de pensión según edad de retiro",
+    "60": 0.75,
+    "61": 0.80,
+    "62": 0.85,
+    "63": 0.90,
+    "64": 0.95,
+    "65": 1.00
+  },
+  "semanas_minimas": 500,
+  "incrementos_por_semanas": {
+    "_descripcion": "Porcentaje adicional por cada 52 semanas después de 500",
+    "500_a_1000": {
+      "incremento_por_52_semanas": 1.25,
+      "acumulado_a_1000": 12.019
+    },
+    "1000_a_1250": {
+      "incremento_por_52_semanas": 1.50,
+      "acumulado_a_1250": 19.231
+    },
+    "1250_a_1500": {
+      "incremento_por_52_semanas": 1.75,
+      "acumulado_a_1500": 27.404
+    },
+    "1500_en_adelante": {
+      "incremento_por_52_semanas": 2.00,
+      "maximo": 100
+    }
+  },
+  "asignaciones_familiares": {
+    "esposa_concubina": 15.00,
+    "hijo_menor_16": 10.00,
+    "hijo_estudiante_hasta_25": 10.00,
+    "padre_dependiente": 10.00,
+    "madre_dependiente": 10.00
+  },
+  "ayuda_asistencial": {
+    "_descripcion": "Si no tiene esposa ni hijos",
+    "porcentaje": 15.00
+  }
+}

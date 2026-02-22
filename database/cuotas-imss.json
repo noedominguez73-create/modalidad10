@@ -1,0 +1,82 @@
+{
+  "_descripcion": "Porcentajes de cuotas IMSS - Generalmente fijos",
+  "_fuente": "Ley del Seguro Social",
+  "_ultima_actualizacion": "2025-01-01",
+  "modalidad_40": {
+    "_articulo": "218 LSS",
+    "_descripcion": "Continuación Voluntaria en el Régimen Obligatorio",
+    "total": 10.075,
+    "desglose": {
+      "enfermedades_maternidad_especie": 1.05,
+      "enfermedades_maternidad_dinero": 0.25,
+      "gastos_medicos_pensionados": 0.375,
+      "invalidez_vida": 1.75,
+      "retiro": 2.00,
+      "cesantia_vejez": 4.275,
+      "guarderias": 0.00,
+      "riesgo_trabajo": 0.00
+    }
+  },
+  "modalidad_10": {
+    "_articulo": "13 LSS",
+    "_descripcion": "Incorporación Voluntaria al Régimen Obligatorio",
+    "cuota_fija": {
+      "patron": 20.40,
+      "base": "UMA"
+    },
+    "excedente_3_umas": {
+      "patron": 1.10,
+      "obrero": 0.40
+    },
+    "prestaciones_dinero": {
+      "patron": 0.70,
+      "obrero": 0.25
+    },
+    "gastos_medicos_pensionados": {
+      "patron": 1.05,
+      "obrero": 0.375
+    },
+    "invalidez_vida": {
+      "patron": 1.75,
+      "obrero": 0.625
+    },
+    "guarderias": {
+      "patron": 1.00,
+      "obrero": 0.00
+    },
+    "retiro": {
+      "patron": 2.00,
+      "obrero": 0.00
+    },
+    "infonavit": {
+      "patron": 5.00,
+      "obrero": 0.00,
+      "opcional": true
+    }
+  },
+  "primas_riesgo_trabajo": {
+    "_descripcion": "Prima según clase de riesgo de la actividad",
+    "clases": {
+      "I": {
+        "prima": 0.54355,
+        "ejemplos": ["Oficinas", "Comercio", "Servicios profesionales", "Bancos"]
+      },
+      "II": {
+        "prima": 1.13065,
+        "ejemplos": ["Alimentos", "Textiles", "Transporte ligero", "Restaurantes"]
+      },
+      "III": {
+        "prima": 2.5984,
+        "ejemplos": ["Agricultura", "Ganadería", "Industria ligera", "Hospitales"]
+      },
+      "IV": {
+        "prima": 4.65325,
+        "ejemplos": ["Minería", "Metalurgia", "Construcción", "Transporte pesado"]
+      },
+      "V": {
+        "prima": 7.58875,
+        "ejemplos": ["Industria pesada", "Explosivos", "Alto riesgo", "Petroquímica"]
+      }
+    }
+  }
+}

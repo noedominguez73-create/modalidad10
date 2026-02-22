@@ -1,0 +1,25 @@
+{
+  "_descripcion": "Salarios Mínimos Generales - Actualizar cada enero",
+  "_fuente": "CONASAMI",
+  "_ultima_actualizacion": "2026-01-01",
+  "vigente": 2026,
+  "historico": {
+    "2020": { "general": 123.22, "frontera": 185.56 },
+    "2021": { "general": 141.70, "frontera": 213.39 },
+    "2022": { "general": 172.87, "frontera": 260.34 },
+    "2023": { "general": 207.44, "frontera": 312.41 },
+    "2024": { "general": 248.93, "frontera": 374.89 },
+    "2025": { "general": 278.80, "frontera": 419.88 },
+    "2026": { "general": 315.04, "frontera": 419.88 }
+  },
+  "zonas": {
+    "frontera": {
+      "descripcion": "Zona Libre de la Frontera Norte",
+      "estados": ["Baja California", "Baja California Sur (parcial)", "Sonora (parcial)", "Chihuahua (parcial)", "Coahuila (parcial)", "Nuevo León (parcial)", "Tamaulipas (parcial)"]
+    },
+    "general": {
+      "descripcion": "Resto del País",
+      "estados": ["Todos los demás estados y municipios no fronterizos"]
+    }
+  }
+}

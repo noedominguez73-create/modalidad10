@@ -1,0 +1,47 @@
+{
+  "_descripcion": "Cuota Social - Aportación del Gobierno Federal al AFORE",
+  "_fuente": "Ley del Seguro Social Art. 168",
+  "_ultima_actualizacion": "2026-01-01",
+  "_nota": "Montos diarios que aporta el Gobierno. Se actualizan trimestralmente con INPC.",
+  "vigente": 2026,
+  "cuotas_por_rango_sbc": {
+    "2025": {
+      "hasta_1.00_uma": { "monto_diario": 6.25, "monto_mensual": 190.10 },
+      "1.01_a_1.50_uma": { "monto_diario": 5.91, "monto_mensual": 179.66 },
+      "1.51_a_2.00_uma": { "monto_diario": 5.56, "monto_mensual": 169.03 },
+      "2.01_a_2.50_uma": { "monto_diario": 5.21, "monto_mensual": 158.39 },
+      "2.51_a_3.00_uma": { "monto_diario": 4.86, "monto_mensual": 147.74 },
+      "3.01_a_3.50_uma": { "monto_diario": 4.51, "monto_mensual": 137.10 },
+      "3.51_a_4.00_uma": { "monto_diario": 4.17, "monto_mensual": 126.77 },
+      "mas_de_4.00_uma": { "monto_diario": 0.00, "monto_mensual": 0.00 }
+    },
+    "2026": {
+      "hasta_1.00_uma": { "monto_diario": 6.48, "monto_mensual": 197.00 },
+      "1.01_a_1.50_uma": { "monto_diario": 6.12, "monto_mensual": 186.05 },
+      "1.51_a_2.00_uma": { "monto_diario": 5.76, "monto_mensual": 175.10 },
+      "2.01_a_2.50_uma": { "monto_diario": 5.40, "monto_mensual": 164.16 },
+      "2.51_a_3.00_uma": { "monto_diario": 5.04, "monto_mensual": 153.22 },
+      "3.01_a_3.50_uma": { "monto_diario": 4.68, "monto_mensual": 142.27 },
+      "3.51_a_4.00_uma": { "monto_diario": 4.32, "monto_mensual": 131.33 },
+      "mas_de_4.00_uma": { "monto_diario": 0.00, "monto_mensual": 0.00 }
+    }
+  },
+  "rangos_sbc": [
+    { "min": 0, "max": 1.00, "clave": "hasta_1.00_uma", "nombre": "Hasta 1 UMA" },
+    { "min": 1.01, "max": 1.50, "clave": "1.01_a_1.50_uma", "nombre": "1.01 a 1.50 UMAs" },
+    { "min": 1.51, "max": 2.00, "clave": "1.51_a_2.00_uma", "nombre": "1.51 a 2.00 UMAs" },
+    { "min": 2.01, "max": 2.50, "clave": "2.01_a_2.50_uma", "nombre": "2.01 a 2.50 UMAs" },
+    { "min": 2.51, "max": 3.00, "clave": "2.51_a_3.00_uma", "nombre": "2.51 a 3.00 UMAs" },
+    { "min": 3.01, "max": 3.50, "clave": "3.01_a_3.50_uma", "nombre": "3.01 a 3.50 UMAs" },
+    { "min": 3.51, "max": 4.00, "clave": "3.51_a_4.00_uma", "nombre": "3.51 a 4.00 UMAs" },
+    { "min": 4.01, "max": 999, "clave": "mas_de_4.00_uma", "nombre": "Más de 4 UMAs" }
+  ],
+  "notas": [
+    "La Cuota Social es una aportación del Gobierno Federal",
+    "Solo aplica para salarios de hasta 4 UMAs",
+    "Se deposita directamente en la cuenta individual AFORE",
+    "Modalidad 40: SÍ genera Cuota Social",
+    "Modalidad 10: SÍ genera Cuota Social",
+    "Los montos se actualizan trimestralmente según INPC"
+  ]
+}

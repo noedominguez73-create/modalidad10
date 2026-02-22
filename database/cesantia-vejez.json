@@ -1,0 +1,102 @@
+{
+  "_descripcion": "Cuotas de Cesantía en Edad Avanzada y Vejez - Incremento gradual 2023-2030",
+  "_fuente": "Reforma Ley del Seguro Social 2020",
+  "_ultima_actualizacion": "2026-01-01",
+  "_nota": "Los porcentajes varían según salario en veces UMA y año",
+  "porcentaje_base": {
+    "patron": 3.150,
+    "obrero": 1.125
+  },
+  "modalidad_40_tasa_total": {
+    "2023": 11.166,
+    "2024": 12.256,
+    "2025": 13.347,
+    "2026": 14.438,
+    "2027": 15.528,
+    "2028": 16.619,
+    "2029": 17.709,
+    "2030": 18.800
+  },
+  "tabla_incrementos": {
+    "2023": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.281, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 3.575, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 3.751, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 3.869, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 3.953, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 4.016, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 4.241, "obrero": 1.125 }
+    },
+    "2024": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.413, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 4.000, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 4.353, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 4.588, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 4.756, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 4.882, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 5.331, "obrero": 1.125 }
+    },
+    "2025": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.544, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 4.426, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 4.954, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 5.307, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 5.559, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 5.747, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 6.422, "obrero": 1.125 }
+    },
+    "2026": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.676, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 4.851, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 5.556, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 6.026, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 6.361, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 6.613, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 7.513, "obrero": 1.125 }
+    },
+    "2027": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.807, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 5.276, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 6.157, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 6.745, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 7.164, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 7.479, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 8.603, "obrero": 1.125 }
+    },
+    "2028": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 3.939, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 5.701, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 6.759, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 7.464, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 7.967, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 8.345, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 9.694, "obrero": 1.125 }
+    },
+    "2029": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 4.070, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 6.126, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 7.360, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 8.183, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 8.770, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 9.211, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 10.784, "obrero": 1.125 }
+    },
+    "2030": {
+      "hasta_1.00_uma": { "patron": 3.150, "obrero": 1.125 },
+      "1.01_a_1.50_uma": { "patron": 4.202, "obrero": 1.125 },
+      "1.51_a_2.00_uma": { "patron": 6.552, "obrero": 1.125 },
+      "2.01_a_2.50_uma": { "patron": 7.962, "obrero": 1.125 },
+      "2.51_a_3.00_uma": { "patron": 8.902, "obrero": 1.125 },
+      "3.01_a_3.50_uma": { "patron": 9.573, "obrero": 1.125 },
+      "3.51_a_4.00_uma": { "patron": 10.077, "obrero": 1.125 },
+      "mas_de_4.00_uma": { "patron": 11.875, "obrero": 1.125 }
+    }
+  }
+}

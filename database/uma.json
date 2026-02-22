@@ -1,0 +1,19 @@
+{
+  "_descripcion": "Unidad de Medida y Actualización - Actualizar cada febrero",
+  "_fuente": "DOF / INEGI",
+  "_ultima_actualizacion": "2026-02-01",
+  "vigente": 2026,
+  "historico": {
+    "2020": { "diario": 86.88, "mensual": 2641.15, "anual": 31693.80 },
+    "2021": { "diario": 89.62, "mensual": 2724.45, "anual": 32693.40 },
+    "2022": { "diario": 96.22, "mensual": 2925.09, "anual": 35101.08 },
+    "2023": { "diario": 103.74, "mensual": 3153.70, "anual": 37844.40 },
+    "2024": { "diario": 108.57, "mensual": 3300.53, "anual": 39628.05 },
+    "2025": { "diario": 113.14, "mensual": 3440.45, "anual": 41296.10 },
+    "2026": { "diario": 117.31, "mensual": 3566.22, "anual": 42818.15 }
+  },
+  "topes": {
+    "2025": { "25_umas_diario": 2828.50, "25_umas_mensual": 84855.00 },
+    "2026": { "25_umas_diario": 2932.75, "25_umas_mensual": 87982.50 }
+  }
+}

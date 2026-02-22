@@ -1,0 +1,152 @@
+{
+  "metadata": {
+    "descripcion": "Catálogo de divisiones y grupos ocupacionales IMSS",
+    "fuente": "Reglamento de la Ley del Seguro Social en Materia de Afiliación, Clasificación de Empresas, Recaudación y Fiscalización",
+    "ultimaActualizacion": "2025-01-01"
+  },
+  "divisiones": [
+    {
+      "codigo": "0",
+      "nombre": "Agricultura, Ganadería, Silvicultura, Pesca y Caza",
+      "grupos": [
+        { "codigo": "01", "nombre": "Agricultura", "claseRiesgo": "III" },
+        { "codigo": "02", "nombre": "Ganadería", "claseRiesgo": "III" },
+        { "codigo": "03", "nombre": "Silvicultura", "claseRiesgo": "IV" },
+        { "codigo": "04", "nombre": "Pesca", "claseRiesgo": "IV" },
+        { "codigo": "05", "nombre": "Caza y captura de animales", "claseRiesgo": "IV" }
+      ]
+    },
+    {
+      "codigo": "1",
+      "nombre": "Industrias Extractivas",
+      "grupos": [
+        { "codigo": "11", "nombre": "Extracción y beneficio de carbón, grafito y minerales no metálicos", "claseRiesgo": "V" },
+        { "codigo": "12", "nombre": "Extracción de petróleo crudo y gas natural", "claseRiesgo": "V" },
+        { "codigo": "13", "nombre": "Extracción y beneficio de mineral de hierro", "claseRiesgo": "V" },
+        { "codigo": "14", "nombre": "Extracción y beneficio de minerales metálicos no ferrosos", "claseRiesgo": "V" },
+        { "codigo": "15", "nombre": "Explotación de sal", "claseRiesgo": "IV" },
+        { "codigo": "16", "nombre": "Extracción de arena, grava y arcilla", "claseRiesgo": "IV" }
+      ]
+    },
+    {
+      "codigo": "2",
+      "nombre": "Industrias de Transformación",
+      "grupos": [
+        { "codigo": "21", "nombre": "Productos alimenticios, bebidas y tabaco", "claseRiesgo": "III" },
+        { "codigo": "22", "nombre": "Textiles, prendas de vestir e industria del cuero", "claseRiesgo": "II" },
+        { "codigo": "23", "nombre": "Industria de la madera y productos de madera", "claseRiesgo": "III" },
+        { "codigo": "24", "nombre": "Papel, productos de papel, imprentas y editoriales", "claseRiesgo": "II" },
+        { "codigo": "25", "nombre": "Sustancias químicas, productos derivados del petróleo", "claseRiesgo": "IV" },
+        { "codigo": "26", "nombre": "Productos de minerales no metálicos (vidrio, cemento)", "claseRiesgo": "IV" },
+        { "codigo": "27", "nombre": "Industrias metálicas básicas", "claseRiesgo": "IV" },
+        { "codigo": "28", "nombre": "Productos metálicos, maquinaria y equipo", "claseRiesgo": "III" },
+        { "codigo": "29", "nombre": "Otras industrias manufactureras", "claseRiesgo": "III" }
+      ]
+    },
+    {
+      "codigo": "3",
+      "nombre": "Industria de la Construcción",
+      "grupos": [
+        { "codigo": "31", "nombre": "Edificación y obras de ingeniería civil", "claseRiesgo": "V" },
+        { "codigo": "32", "nombre": "Trabajos especializados de construcción", "claseRiesgo": "IV" }
+      ]
+    },
+    {
+      "codigo": "4",
+      "nombre": "Industria Eléctrica, Captación y Suministro de Agua Potable",
+      "grupos": [
+        { "codigo": "41", "nombre": "Generación, transmisión y distribución de energía eléctrica", "claseRiesgo": "IV" },
+        { "codigo": "42", "nombre": "Captación, tratamiento y suministro de agua", "claseRiesgo": "III" }
+      ]
+    },
+    {
+      "codigo": "5",
+      "nombre": "Comercio",
+      "grupos": [
+        { "codigo": "51", "nombre": "Comercio al por mayor", "claseRiesgo": "II" },
+        { "codigo": "52", "nombre": "Comercio al por menor", "claseRiesgo": "II" },
+        { "codigo": "53", "nombre": "Restaurantes y hoteles", "claseRiesgo": "II" }
+      ]
+    },
+    {
+      "codigo": "6",
+      "nombre": "Transportes y Comunicaciones",
+      "grupos": [
+        { "codigo": "61", "nombre": "Transporte terrestre", "claseRiesgo": "III" },
+        { "codigo": "62", "nombre": "Transporte por agua", "claseRiesgo": "IV" },
+        { "codigo": "63", "nombre": "Transporte aéreo", "claseRiesgo": "III" },
+        { "codigo": "64", "nombre": "Servicios conexos al transporte", "claseRiesgo": "III" },
+        { "codigo": "65", "nombre": "Comunicaciones", "claseRiesgo": "II" }
+      ]
+    },
+    {
+      "codigo": "7",
+      "nombre": "Servicios para Empresas, Personas y el Hogar",
+      "grupos": [
+        { "codigo": "71", "nombre": "Servicios financieros (bancos, seguros, bolsa)", "claseRiesgo": "I" },
+        { "codigo": "72", "nombre": "Alquiler de inmuebles", "claseRiesgo": "I" },
+        { "codigo": "73", "nombre": "Servicios profesionales, técnicos y especializados", "claseRiesgo": "I" },
+        { "codigo": "74", "nombre": "Servicios de alojamiento temporal", "claseRiesgo": "II" },
+        { "codigo": "75", "nombre": "Preparación de alimentos y bebidas", "claseRiesgo": "II" },
+        { "codigo": "76", "nombre": "Servicios de esparcimiento", "claseRiesgo": "II" },
+        { "codigo": "77", "nombre": "Servicios personales diversos", "claseRiesgo": "II" },
+        { "codigo": "78", "nombre": "Servicios domésticos", "claseRiesgo": "I" }
+      ]
+    },
+    {
+      "codigo": "8",
+      "nombre": "Servicios Sociales y Comunales",
+      "grupos": [
+        { "codigo": "81", "nombre": "Servicios educativos", "claseRiesgo": "I" },
+        { "codigo": "82", "nombre": "Servicios de investigación científica", "claseRiesgo": "I" },
+        { "codigo": "83", "nombre": "Servicios médicos, odontológicos y veterinarios", "claseRiesgo": "II" },
+        { "codigo": "84", "nombre": "Instituciones de asistencia social", "claseRiesgo": "II" },
+        { "codigo": "85", "nombre": "Asociaciones civiles y religiosas", "claseRiesgo": "I" },
+        { "codigo": "86", "nombre": "Servicios de administración pública", "claseRiesgo": "I" }
+      ]
+    },
+    {
+      "codigo": "9",
+      "nombre": "Actividades no especificadas",
+      "grupos": [
+        { "codigo": "91", "nombre": "Freelancer / Trabajo desde casa", "claseRiesgo": "I" },
+        { "codigo": "92", "nombre": "Comercio electrónico", "claseRiesgo": "I" },
+        { "codigo": "93", "nombre": "Creador de contenido digital", "claseRiesgo": "I" },
+        { "codigo": "94", "nombre": "Consultoría independiente", "claseRiesgo": "I" },
+        { "codigo": "95", "nombre": "Desarrollo de software", "claseRiesgo": "I" }
+      ]
+    }
+  ],
+  "clasesRiesgo": {
+    "I": {
+      "nombre": "Riesgo Mínimo",
+      "primaMedia": 0.54355,
+      "descripcion": "Actividades seguras con baja probabilidad de accidentes",
+      "ejemplos": ["Oficinas", "Consultoría", "Servicios financieros", "Educación"]
+    },
+    "II": {
+      "nombre": "Riesgo Bajo",
+      "primaMedia": 1.13065,
+      "descripcion": "Actividades con ligero riesgo de accidentes",
+      "ejemplos": ["Comercio", "Restaurantes", "Servicios médicos consultorios"]
+    },
+    "III": {
+      "nombre": "Riesgo Medio",
+      "primaMedia": 2.5984,
+      "descripcion": "Actividades con uso de herramientas o maquinaria",
+      "ejemplos": ["Manufactura ligera", "Transporte", "Agricultura"]
+    },
+    "IV": {
+      "nombre": "Riesgo Alto",
+      "primaMedia": 4.65325,
+      "descripcion": "Actividades con alta probabilidad de accidentes",
+      "ejemplos": ["Construcción especializada", "Industria química", "Minería de superficie"]
+    },
+    "V": {
+      "nombre": "Riesgo Máximo",
+      "primaMedia": 7.58875,
+      "descripcion": "Actividades de máxima peligrosidad",
+      "ejemplos": ["Construcción pesada", "Minería subterránea", "Petróleo", "Plataformas"]
+    }
+  }
+}

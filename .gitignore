@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+client/node_modules/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Settings (credenciales sensibles)
+server/data/settings.json
+
+# Build
+client/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads (documentos de clientes)
+uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temp
+*.tmp
+*.temp
+
+# PM2
+.pm2/
+
+# Excel temp files
+~$*.xlsx
+~$*.xlsm

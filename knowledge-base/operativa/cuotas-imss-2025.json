@@ -1,0 +1,111 @@
+{
+  "metadata": {
+    "version": "2025-01",
+    "fuente": "Ley del Seguro Social y SHCP",
+    "ultima_actualizacion": "2025-01-01"
+  },
+  "uma": {
+    "2024": {
+      "diario": 108.57,
+      "mensual": 3257.10,
+      "anual": 39637.20
+    },
+    "2025": {
+      "diario": 113.14,
+      "mensual": 3394.20,
+      "anual": 40730.40
+    }
+  },
+  "topes_salariales": {
+    "minimo": {
+      "descripcion": "1 UMA",
+      "diario_2025": 113.14,
+      "mensual_2025": 3394.20
+    },
+    "maximo_mod40": {
+      "descripcion": "25 UMAs",
+      "diario_2025": 2828.50,
+      "mensual_2025": 84855.00
+    }
+  },
+  "cuotas_modalidad_40": {
+    "descripcion": "Continuación Voluntaria en el Régimen Obligatorio",
+    "base_legal": "Artículo 218 LSS",
+    "porcentaje_total": 10.075,
+    "desglose": {
+      "enfermedades_maternidad": {
+        "especie": 1.05,
+        "dinero": 0.25,
+        "pensionados": 0.375
+      },
+      "invalidez_vida": 1.75,
+      "retiro": 2.00,
+      "cesantia_vejez": 4.275,
+      "guarderias": 0.00,
+      "infonavit": 0.00
+    },
+    "nota": "El asegurado paga la cuota completa (obrera + patronal)"
+  },
+  "cuotas_modalidad_10": {
+    "descripcion": "Incorporación Voluntaria al Régimen Obligatorio (Independientes)",
+    "base_legal": "Artículo 13 LSS",
+    "porcentaje_total": 22.398,
+    "desglose": {
+      "enfermedades_maternidad_especie": 1.10,
+      "enfermedades_maternidad_dinero": 0.70,
+      "invalidez_vida": 2.50,
+      "retiro": 2.00,
+      "cesantia_vejez": 5.15,
+      "guarderias": 1.00,
+      "riesgos_trabajo": "Variable según actividad"
+    }
+  },
+  "factores_edad_pension_ley73": {
+    "60": 0.75,
+    "61": 0.80,
+    "62": 0.85,
+    "63": 0.90,
+    "64": 0.95,
+    "65": 1.00
+  },
+  "incrementos_semanas_ley73": {
+    "500_a_1000": {
+      "incremento_por_52_semanas": 1.25,
+      "descripcion": "Primeras 500 semanas adicionales"
+    },
+    "1000_a_1250": {
+      "incremento_por_52_semanas": 1.50,
+      "descripcion": "De 1000 a 1250 semanas"
+    },
+    "1250_a_1500": {
+      "incremento_por_52_semanas": 1.75,
+      "descripcion": "De 1250 a 1500 semanas"
+    },
+    "1500_en_adelante": {
+      "incremento_por_52_semanas": 2.00,
+      "descripcion": "Más de 1500 semanas"
+    }
+  },
+  "pension_minima_garantizada": {
+    "ley_73": {
+      "descripcion": "Salario mínimo vigente",
+      "monto_mensual_2025": 8294.40
+    },
+    "ley_97": {
+      "descripcion": "Pensión Garantizada (mínima)",
+      "monto_mensual_2025": 8294.40,
+      "requisito_semanas": 1000
+    }
+  },
+  "incrementos_cesantia_vejez": {
+    "descripcion": "Incremento gradual 2023-2030 en cuota de Cesantía",
+    "2023": 3.150,
+    "2024": 3.70,
+    "2025": 4.275,
+    "2026": 4.85,
+    "2027": 5.425,
+    "2028": 6.00,
+    "2029": 6.575,
+    "2030": 7.15
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "_descripcion": "Cuotas del Seguro de Salud para la Familia (Modalidad 33) - Por rango de edad",
+  "_fuente": "IMSS - Artículos 240-242 LSS",
+  "_ultima_actualizacion": "2026-03-01",
+  "_nota": "Cuotas anuales por persona. Se actualizan cada 1 de marzo.",
+  "vigente": 2026,
+  "cuota_inscripcion": {
+    "2025": {
+      "porcentaje_uma_anual": 10.82,
+      "monto_aproximado": 4468.00
+    },
+    "2026": {
+      "porcentaje_uma_anual": 10.82,
+      "monto_aproximado": 4633.00
+    }
+  },
+  "cuotas_por_edad": {
+    "2025": {
+      "0-19": { "porcentaje_uma_anual": 4.36, "monto_anual": 1800.00, "monto_mensual": 150.00 },
+      "20-39": { "porcentaje_uma_anual": 7.72, "monto_anual": 3190.00, "monto_mensual": 265.83 },
+      "40-59": { "porcentaje_uma_anual": 10.35, "monto_anual": 4280.00, "monto_mensual": 356.67 },
+      "60-69": { "porcentaje_uma_anual": 16.15, "monto_anual": 6675.00, "monto_mensual": 556.25 },
+      "70-79": { "porcentaje_uma_anual": 18.50, "monto_anual": 7645.00, "monto_mensual": 637.08 },
+      "80+": { "porcentaje_uma_anual": 20.00, "monto_anual": 8260.00, "monto_mensual": 688.33 }
+    },
+    "2026": {
+      "0-19": { "porcentaje_uma_anual": 4.36, "monto_anual": 8900.00, "monto_mensual": 741.67 },
+      "20-39": { "porcentaje_uma_anual": 7.72, "monto_anual": 10500.00, "monto_mensual": 875.00 },
+      "40-59": { "porcentaje_uma_anual": 10.35, "monto_anual": 14200.00, "monto_mensual": 1183.33 },
+      "60-69": { "porcentaje_uma_anual": 16.15, "monto_anual": 16800.00, "monto_mensual": 1400.00 },
+      "70-79": { "porcentaje_uma_anual": 18.50, "monto_anual": 18500.00, "monto_mensual": 1541.67 },
+      "80+": { "porcentaje_uma_anual": 21.00, "monto_anual": 21300.00, "monto_mensual": 1775.00 }
+    }
+  },
+  "rangos_edad": [
+    { "min": 0, "max": 19, "nombre": "Menores de 20 años" },
+    { "min": 20, "max": 39, "nombre": "20 a 39 años" },
+    { "min": 40, "max": 59, "nombre": "40 a 59 años" },
+    { "min": 60, "max": 69, "nombre": "60 a 69 años" },
+    { "min": 70, "max": 79, "nombre": "70 a 79 años" },
+    { "min": 80, "max": 120, "nombre": "80 años o más" }
+  ],
+  "parentescos_permitidos": [
+    "Titular",
+    "Cónyuge",
+    "Concubina/Concubinario",
+    "Hijos menores de 16 años",
+    "Hijos de 16 a 25 años (estudiantes)",
+    "Padres",
+    "Otros dependientes económicos"
+  ],
+  "beneficios": [
+    "Atención médica",
+    "Hospitalización",
+    "Cirugía",
+    "Medicamentos",
+    "Maternidad (para aseguradas)"
+  ],
+  "exclusiones": [
+    "NO acumula semanas para pensión",
+    "NO genera derechos de incapacidad",
+    "NO incluye guarderías"
+  ]
+}

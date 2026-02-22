@@ -1,0 +1,37 @@
+{
+  "_descripcion": "Índice Nacional de Precios al Consumidor - Actualizar mensualmente",
+  "_fuente": "INEGI",
+  "_ultima_actualizacion": "2025-02-01",
+  "_uso": "Actualización de salarios para cálculo de pensión Ley 97",
+  "base": "Segunda quincena de julio 2018 = 100",
+  "historico": {
+    "2020": {
+      "enero": 106.447, "febrero": 106.889, "marzo": 106.838, "abril": 105.755,
+      "mayo": 106.162, "junio": 106.743, "julio": 107.443, "agosto": 108.114,
+      "septiembre": 108.114, "octubre": 108.773, "noviembre": 108.856, "diciembre": 109.271
+    },
+    "2021": {
+      "enero": 109.880, "febrero": 110.326, "marzo": 111.367, "abril": 111.824,
+      "mayo": 112.190, "junio": 112.631, "julio": 113.251, "agosto": 113.696,
+      "septiembre": 114.236, "octubre": 115.039, "noviembre": 116.117, "diciembre": 116.877
+    },
+    "2022": {
+      "enero": 117.636, "febrero": 118.251, "marzo": 119.040, "abril": 119.697,
+      "mayo": 119.944, "junio": 120.605, "julio": 121.303, "agosto": 121.746,
+      "septiembre": 122.066, "octubre": 122.486, "noviembre": 123.027, "diciembre": 123.574
+    },
+    "2023": {
+      "enero": 124.168, "febrero": 124.669, "marzo": 124.913, "abril": 125.098,
+      "mayo": 125.281, "junio": 125.485, "julio": 125.941, "agosto": 126.562,
+      "septiembre": 127.007, "octubre": 127.336, "noviembre": 127.708, "diciembre": 128.452
+    },
+    "2024": {
+      "enero": 129.409, "febrero": 129.837, "marzo": 130.055, "abril": 130.312,
+      "mayo": 130.433, "junio": 130.653, "julio": 131.149, "agosto": 131.564,
+      "septiembre": 131.878, "octubre": 132.372, "noviembre": 132.774, "diciembre": 133.215
+    },
+    "2025": {
+      "enero": 133.681, "febrero": 134.102
+    }
+  }
+}
