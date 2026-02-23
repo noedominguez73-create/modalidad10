@@ -1,0 +1,184 @@
+{
+  "_descripcion": "Base de datos de prospectos y clientes - Sistema CRM IMSS",
+  "_version": "1.0",
+  "_ultima_actualizacion": "2026-02-22",
+  "configuracion": {
+    "metodosPago": {
+      "paypal": {
+        "activo": true,
+        "email": "",
+        "instrucciones": "Enviar como 'Amigos y familia'. Incluir nombre y ultimos 4 digitos del NSS."
+      },
+      "zelle": {
+        "activo": true,
+        "telefono": "",
+        "email": "",
+        "instrucciones": "Incluir nombre completo en la nota."
+      },
+      "venmo": {
+        "activo": false,
+        "usuario": "",
+        "instrucciones": ""
+      },
+      "westernUnion": {
+        "activo": true,
+        "beneficiario": "",
+        "ciudad": "",
+        "estado": "",
+        "pais": "Mexico",
+        "telefono": "",
+        "instrucciones": "Proporcionar MTCN al confirmar envio."
+      },
+      "transferenciaMX": {
+        "activo": true,
+        "banco": "",
+        "clabe": "",
+        "beneficiario": "",
+        "instrucciones": "Solo para clientes con cuenta en Mexico."
+      }
+    },
+    "calendario": {
+      "diaRecordatorio1": 3,
+      "diaRecordatorio2": 8,
+      "diaLimitePago": 12,
+      "diaPagoIMSS": 15,
+      "diaVerificacion": 18
+    },
+    "comisiones": {
+      "servicioBase": 15,
+      "moneda": "USD"
+    }
+  },
+  "prospectos": [
+    {
+      "id": "8a2821e6-93ef-4c8d-b0d4-eeb79c40002c",
+      "fechaRegistro": "2026-02-23T00:36:51.010Z",
+      "origen": "whatsapp",
+      "nombreCompleto": "JUAN PEREZ GARCIA",
+      "curp": "PEGJ850101HDFRNN09",
+      "nss": "12345678901",
+      "fechaNacimiento": null,
+      "sexo": "Masculino",
+      "telefonoUSA": "+15551234567",
+      "telefonoMexico": null,
+      "whatsapp": "+15551234567",
+      "email": "juan.perez@example.com",
+      "direccionUSA": {
+        "calle": "",
+        "ciudad": "",
+        "estado": "",
+        "zipCode": ""
+      },
+      "contactoMexico": {
+        "nombre": "",
+        "telefono": "",
+        "parentesco": ""
+      },
+      "modalidadInteres": "40",
+      "semanasActuales": null,
+      "ultimoPatron": null,
+      "fechaUltimaBaja": null,
+      "estatus": "convertido",
+      "fechaUltimoContacto": null,
+      "siguienteContacto": "2026-02-23T00:36:51.010Z",
+      "intentosContacto": 0,
+      "canalPreferido": "llamada",
+      "consentimientoContacto": true,
+      "consentimientoWhatsapp": true,
+      "consentimientoLlamadas": true,
+      "fechaConsentimiento": "2026-02-23T00:36:51.010Z",
+      "notas": [],
+      "historialContactos": [],
+      "fechaConversion": "2026-02-23T00:36:56.374Z"
+    }
+  ],
+  "clientes": [
+    {
+      "id": "465b9acd-c1c1-4dcb-98c5-4734aee50ccc",
+      "prospectoId": "8a2821e6-93ef-4c8d-b0d4-eeb79c40002c",
+      "fechaAlta": "2026-02-23T00:36:56.374Z",
+      "nombreCompleto": "JUAN PEREZ GARCIA",
+      "curp": "PEGJ850101HDFRNN09",
+      "nss": "12345678901",
+      "fechaNacimiento": null,
+      "telefonoUSA": "+15551234567",
+      "telefonoMexico": null,
+      "whatsapp": "+15551234567",
+      "email": "juan.perez@example.com",
+      "direccionUSA": {
+        "calle": "",
+        "ciudad": "",
+        "estado": "",
+        "zipCode": ""
+      },
+      "contactoMexico": {
+        "nombre": "",
+        "telefono": "",
+        "parentesco": ""
+      },
+      "modalidad": "40",
+      "salarioRegistrado": 3500,
+      "incluirInfonavit": false,
+      "zona": "general",
+      "cuotaIMSS": 350,
+      "cuotaServicio": 15,
+      "totalMensual": 365,
+      "moneda": "USD",
+      "fechaCorte": 15,
+      "fechaLimitePagoCliente": 10,
+      "fechaPagoIMSS": 17,
+      "proximoCorte": "2026-03-15T06:00:00.000Z",
+      "metodoPagoPreferido": "paypal",
+      "datosPago": {
+        "paypalEmail": "",
+        "zellePhone": "",
+        "zelleEmail": "",
+        "venmoUser": "",
+        "cuentaMexico": ""
+      },
+      "estatusServicio": "activo",
+      "estatusPagoActual": "pendiente",
+      "mesActualPagado": false,
+      "vigenciaIMSS": {
+        "ultimaVerificacion": null,
+        "vigente": false,
+        "fechaVigenciaHasta": null,
+        "clinicaAsignada": null,
+        "capturaVigencia": null
+      },
+      "historialPagos": [],
+      "historialRenovaciones": [],
+      "historialVigencias": [],
+      "notas": []
+    }
+  ],
+  "pagosRecibidos": [
+    {
+      "id": "9938bd29-7060-4bea-8279-e6c9994f60cc",
+      "fecha": "2026-02-23T00:37:03.423Z",
+      "fechaRegistro": "2026-02-23T00:37:03.423Z",
+      "metodo": "paypal",
+      "monto": 365,
+      "moneda": "USD",
+      "referencia": "",
+      "comprobante": null,
+      "nombreRemitente": "JUAN PEREZ",
+      "emailRemitente": "juan.perez@example.com",
+      "telefonoRemitente": "",
+      "notaRemitente": "pago mensual NSS 12345678901",
+      "clienteId": "465b9acd-c1c1-4dcb-98c5-4734aee50ccc",
+      "matched": true,
+      "matchedPor": "automatico",
+      "fechaMatch": "2026-02-23T00:37:03.423Z",
+      "matchConfidencia": 100,
+      "candidatosMatch": [],
+      "estatusProcesamiento": "matched_pendiente_confirmacion",
+      "fechaPagoIMSS": null,
+      "referenciaIMSS": null,
+      "capturaComprobanteIMSS": null
+    }
+  ],
+  "pagosIMSS": [],
+  "verificacionesVigencia": [],
+  "historialContactos": []
+}
