@@ -626,22 +626,25 @@ function App() {
         }
 
       case 'opciones_sin_historial':
-        const msgOpcion = mensaje.toLowerCase()
-        if (msgOpcion.includes('modalidad 10') || msgOpcion.includes('mod 10') || msgOpcion.includes('independiente') || msgOpcion.includes('freelance') || msgOpcion.includes('negocio')) {
+        const msgOpcion = mensaje.toLowerCase().trim()
+        // Aceptar número 1 o palabras relacionadas con Modalidad 10
+        if (msgOpcion === '1' || msgOpcion.includes('modalidad 10') || msgOpcion.includes('mod 10') || msgOpcion.includes('independiente') || msgOpcion.includes('freelance') || msgOpcion.includes('negocio')) {
           return {
             mensaje: `¡La **Modalidad 10** es ideal para ti!\n\n**Beneficios:**\n✅ Servicio médico completo en IMSS\n✅ Acumulas semanas para tu pensión\n✅ Puedes elegir tu salario de cotización\n\n**Costo aproximado con salario de $13,000/mes:**\n💰 ~$2,420/mes (cuotas patronales + obrero)\n\n**Para inscribirte necesitas:**\n1. Acudir a la subdelegación IMSS de tu zona\n2. Llevar identificación oficial, CURP, comprobante de domicilio\n3. Llenar solicitud de inscripción voluntaria\n\n¿Te gustaría que calcule el costo exacto según el salario que deseas registrar?`,
             nuevoContexto: { opcionElegida: 'mod10' },
             siguientePaso: 'calcular_mod10'
           }
         }
-        if (msgOpcion.includes('hogar') || msgOpcion.includes('domestico') || msgOpcion.includes('limpieza') || msgOpcion.includes('cuidado') || msgOpcion.includes('patron')) {
+        // Aceptar número 2 o palabras relacionadas con Trabajadoras del Hogar
+        if (msgOpcion === '2' || msgOpcion.includes('hogar') || msgOpcion.includes('domestico') || msgOpcion.includes('limpieza') || msgOpcion.includes('cuidado') || msgOpcion.includes('patron')) {
           return {
             mensaje: `**Trabajadoras del Hogar** es la opción si trabajas en un hogar.\n\n**Importante:** Desde 2022 es **OBLIGATORIO** que tu patrón (empleador) te inscriba.\n\n**Beneficios:**\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ Incapacidades pagadas\n✅ Acceso a guarderías IMSS\n\n**El patrón debe:**\n1. Registrarse como empleador en el portal IMSS\n2. Inscribirte con tu CURP y datos\n3. Pagar las cuotas según tus días trabajados\n\nSi tu patrón no te quiere inscribir, puedes denunciarlo en PROFEDET o acudir al IMSS.\n\n¿Tu empleador ya te inscribió o necesitas orientación?`,
             nuevoContexto: { opcionElegida: 'hogar' },
             siguientePaso: 'completado'
           }
         }
-        if (msgOpcion.includes('empleo') || msgOpcion.includes('trabajo formal') || msgOpcion.includes('empresa')) {
+        // Aceptar número 3 o palabras relacionadas con empleo formal
+        if (msgOpcion === '3' || msgOpcion.includes('empleo') || msgOpcion.includes('trabajo formal') || msgOpcion.includes('empresa')) {
           return {
             mensaje: `Si consigues un **empleo formal**, tu patrón está obligado a inscribirte al IMSS desde el primer día.\n\n**Beneficios:**\n✅ El patrón paga la mayor parte de las cuotas\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ INFONAVIT (crédito vivienda)\n✅ AFORE (ahorro para retiro)\n\n**Consejos:**\n- Verifica que te den de alta (consulta en IMSS Digital)\n- Guarda tus recibos de nómina\n- Revisa que el salario registrado sea el correcto\n\n¿Hay algo más que pueda ayudarte?`,
             nuevoContexto: { opcionElegida: 'formal' },
