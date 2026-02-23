@@ -9,6 +9,7 @@ import { LEY_SEGURO_SOCIAL, PREGUNTAS_FRECUENTES, buscarEnBaseConocimiento } fro
 import db from './database.js';
 import feedback from './feedback.js';
 import settings from './settings.js';
+import crm from './crm/index.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -834,6 +835,385 @@ app.delete('/api/settings/numeros/:id', (req, res) => {
   }
 });
 
+// ============================================
+// SISTEMA CRM - PROSPECTOS, CLIENTES, PAGOS
+// ============================================
+
+// --- PROSPECTOS ---
+
+// Crear prospecto
+app.post('/api/crm/prospectos', (req, res) => {
+  try {
+    const prospecto = crm.prospectos.crearProspecto(req.body);
+    res.json({ success: true, data: prospecto });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener todos los prospectos
+app.get('/api/crm/prospectos', (req, res) => {
+  try {
+    const filtros = {
+      estatus: req.query.estatus,
+      modalidad: req.query.modalidad,
+      origen: req.query.origen
+    };
+    const prospectos = crm.prospectos.obtenerProspectos(filtros);
+    res.json({ success: true, data: prospectos });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener prospecto por ID
+app.get('/api/crm/prospectos/:id', (req, res) => {
+  try {
+    const prospecto = crm.prospectos.obtenerProspectoPorId(req.params.id);
+    if (!prospecto) {
+      return res.status(404).json({ success: false, error: 'Prospecto no encontrado' });
+    }
+    res.json({ success: true, data: prospecto });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Buscar prospectos
+app.get('/api/crm/prospectos/buscar/:termino', (req, res) => {
+  try {
+    const resultados = crm.prospectos.buscarProspecto(req.params.termino);
+    res.json({ success: true, data: resultados });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar prospecto
+app.put('/api/crm/prospectos/:id', (req, res) => {
+  try {
+    const prospecto = crm.prospectos.actualizarProspecto(req.params.id, req.body);
+    res.json({ success: true, data: prospecto });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Registrar contacto con prospecto
+app.post('/api/crm/prospectos/:id/contacto', (req, res) => {
+  try {
+    const prospecto = crm.prospectos.registrarContacto(req.params.id, req.body);
+    res.json({ success: true, data: prospecto });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Agregar nota a prospecto
+app.post('/api/crm/prospectos/:id/notas', (req, res) => {
+  try {
+    const { texto } = req.body;
+    if (!texto) {
+      return res.status(400).json({ success: false, error: 'Texto de la nota es requerido' });
+    }
+    const prospecto = crm.prospectos.agregarNota(req.params.id, texto);
+    res.json({ success: true, data: prospecto });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener prospectos pendientes de contacto
+app.get('/api/crm/prospectos-pendientes', (req, res) => {
+  try {
+    const pendientes = crm.prospectos.obtenerProspectosPendientes();
+    res.json({ success: true, data: pendientes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Estadísticas de prospectos
+app.get('/api/crm/prospectos-stats', (req, res) => {
+  try {
+    const stats = crm.prospectos.obtenerEstadisticasProspectos();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- CLIENTES ---
+
+// Convertir prospecto a cliente
+app.post('/api/crm/prospectos/:id/convertir', (req, res) => {
+  try {
+    const cliente = crm.clientes.convertirProspectoACliente(req.params.id, req.body);
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Crear cliente directo (sin prospecto)
+app.post('/api/crm/clientes', (req, res) => {
+  try {
+    const cliente = crm.clientes.crearCliente(req.body);
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener todos los clientes
+app.get('/api/crm/clientes', (req, res) => {
+  try {
+    const filtros = {
+      estatus: req.query.estatus,
+      modalidad: req.query.modalidad,
+      pagoPendiente: req.query.pagoPendiente === 'true'
+    };
+    const clientes = crm.clientes.obtenerClientes(filtros);
+    res.json({ success: true, data: clientes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener cliente por ID
+app.get('/api/crm/clientes/:id', (req, res) => {
+  try {
+    const cliente = crm.clientes.obtenerClientePorId(req.params.id);
+    if (!cliente) {
+      return res.status(404).json({ success: false, error: 'Cliente no encontrado' });
+    }
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Buscar clientes
+app.get('/api/crm/clientes/buscar/:termino', (req, res) => {
+  try {
+    const resultados = crm.clientes.buscarCliente(req.params.termino);
+    res.json({ success: true, data: resultados });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar cliente
+app.put('/api/crm/clientes/:id', (req, res) => {
+  try {
+    const cliente = crm.clientes.actualizarCliente(req.params.id, req.body);
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Registrar pago de cliente
+app.post('/api/crm/clientes/:id/pagos', (req, res) => {
+  try {
+    const cliente = crm.clientes.registrarPagoCliente(req.params.id, req.body);
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar vigencia del cliente
+app.post('/api/crm/clientes/:id/vigencia', (req, res) => {
+  try {
+    const cliente = crm.clientes.actualizarVigencia(req.params.id, req.body);
+    res.json({ success: true, data: cliente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener clientes con pago pendiente
+app.get('/api/crm/clientes-pago-pendiente', (req, res) => {
+  try {
+    const clientes = crm.clientes.obtenerClientesPagoPendiente();
+    res.json({ success: true, data: clientes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Estadísticas de clientes
+app.get('/api/crm/clientes-stats', (req, res) => {
+  try {
+    const stats = crm.clientes.obtenerEstadisticasClientes();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- PAGOS ---
+
+// Registrar pago recibido (para hacer match)
+app.post('/api/crm/pagos/recibidos', (req, res) => {
+  try {
+    const resultado = crm.pagos.registrarPagoRecibido(req.body);
+    res.json({ success: true, data: resultado });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Match manual de pago con cliente
+app.post('/api/crm/pagos/:pagoId/match/:clienteId', (req, res) => {
+  try {
+    const resultado = crm.pagos.matchManual(req.params.pagoId, req.params.clienteId);
+    res.json({ success: true, data: resultado });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Confirmar match de pago
+app.post('/api/crm/pagos/:pagoId/confirmar', (req, res) => {
+  try {
+    const pago = crm.pagos.confirmarMatch(req.params.pagoId);
+    res.json({ success: true, data: pago });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Marcar pago como pagado en IMSS
+app.post('/api/crm/pagos/:pagoId/pagado-imss', (req, res) => {
+  try {
+    const pago = crm.pagos.marcarPagadoIMSS(req.params.pagoId, req.body);
+    res.json({ success: true, data: pago });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener pagos pendientes de match
+app.get('/api/crm/pagos/pendientes-match', (req, res) => {
+  try {
+    const pagos = crm.pagos.obtenerPagosPendientesMatch();
+    res.json({ success: true, data: pagos });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener pagos pendientes de pago IMSS
+app.get('/api/crm/pagos/pendientes-imss', (req, res) => {
+  try {
+    const pagos = crm.pagos.obtenerPagosPendientesIMSS();
+    res.json({ success: true, data: pagos });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Historial de pagos
+app.get('/api/crm/pagos/historial', (req, res) => {
+  try {
+    const filtros = {
+      clienteId: req.query.clienteId,
+      metodo: req.query.metodo,
+      estatus: req.query.estatus,
+      fechaDesde: req.query.fechaDesde,
+      fechaHasta: req.query.fechaHasta
+    };
+    const pagos = crm.pagos.obtenerHistorialPagos(filtros);
+    res.json({ success: true, data: pagos });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Estadísticas de pagos
+app.get('/api/crm/pagos-stats', (req, res) => {
+  try {
+    const stats = crm.pagos.obtenerEstadisticasPagos();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- NOTIFICACIONES ---
+
+// Generar recordatorios de pago
+app.get('/api/crm/notificaciones/recordatorios', (req, res) => {
+  try {
+    const recordatorios = crm.notificaciones.generarRecordatoriosPago();
+    res.json({ success: true, data: recordatorios });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Generar mensaje de bienvenida
+app.get('/api/crm/notificaciones/bienvenida/:clienteId', (req, res) => {
+  try {
+    const mensaje = crm.notificaciones.generarMensajeBienvenida(req.params.clienteId);
+    res.json({ success: true, data: mensaje });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Generar mensaje de pago recibido
+app.post('/api/crm/notificaciones/pago-recibido/:clienteId', (req, res) => {
+  try {
+    const mensaje = crm.notificaciones.generarMensajePagoRecibido(req.params.clienteId, req.body);
+    res.json({ success: true, data: mensaje });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Generar mensaje de vigencia confirmada
+app.post('/api/crm/notificaciones/vigencia/:clienteId', (req, res) => {
+  try {
+    const mensaje = crm.notificaciones.generarMensajeVigencia(req.params.clienteId, req.body);
+    res.json({ success: true, data: mensaje });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Generar mensaje de confirmación de match
+app.post('/api/crm/notificaciones/confirmar-match/:clienteId', (req, res) => {
+  try {
+    const mensaje = crm.notificaciones.generarMensajeConfirmarMatch(req.params.clienteId, req.body);
+    res.json({ success: true, data: mensaje });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Dashboard CRM - resumen general
+app.get('/api/crm/dashboard', (req, res) => {
+  try {
+    const dashboard = {
+      prospectos: crm.prospectos.obtenerEstadisticasProspectos(),
+      clientes: crm.clientes.obtenerEstadisticasClientes(),
+      pagos: crm.pagos.obtenerEstadisticasPagos(),
+      pendientes: {
+        prospectosPorContactar: crm.prospectos.obtenerProspectosPendientes().length,
+        pagosPorMatch: crm.pagos.obtenerPagosPendientesMatch().length,
+        pagosPorIMSS: crm.pagos.obtenerPagosPendientesIMSS().length,
+        clientesPagoPendiente: crm.clientes.obtenerClientesPagoPendiente().length
+      }
+    };
+    res.json({ success: true, data: dashboard });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Health check
 app.get('/api/status', (req, res) => {
   let feedbackStats = null;
@@ -841,9 +1221,18 @@ app.get('/api/status', (req, res) => {
     feedbackStats = feedback.obtenerEstadisticas();
   } catch (e) {}
 
+  let crmStats = null;
+  try {
+    crmStats = {
+      prospectos: crm.prospectos.obtenerEstadisticasProspectos().total,
+      clientes: crm.clientes.obtenerEstadisticasClientes().total,
+      pagosPendientes: crm.pagos.obtenerPagosPendientesMatch().length
+    };
+  } catch (e) {}
+
   res.json({
     status: 'ok',
-    version: '3.4.0',
+    version: '3.5.0',
     features: [
       'calculo-mod40',
       'calculo-mod10',
@@ -856,7 +1245,11 @@ app.get('/api/status', (req, res) => {
       'feedback-training',
       'rag',
       'agente',
-      'diagnostico'
+      'diagnostico',
+      'crm-prospectos',
+      'crm-clientes',
+      'crm-pagos',
+      'crm-notificaciones'
     ],
     canales: {
       web: true,
@@ -868,7 +1261,8 @@ app.get('/api/status', (req, res) => {
     feedback: feedbackStats ? {
       total: feedbackStats.general.total,
       tasaPositiva: feedbackStats.general.tasaPositiva
-    } : null
+    } : null,
+    crm: crmStats
   });
 });
 
@@ -880,23 +1274,25 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════════════╗
-║  🧮 CALCULADORA IMSS MULTICANAL v3.4                              ║
+║  🧮 CALCULADORA IMSS MULTICANAL + CRM v3.5                        ║
 ║  ═══════════════════════════════════════════════════════════════  ║
 ║                                                                   ║
 ║  📊 Mod 40 (Pensión) | 📋 Mod 10 (Completo) | 🏥 Mod 33 (Médico)  ║
 ║  🏠 Trabajadoras Hogar | 🏢 Divisiones IMSS | 👍 Feedback         ║
 ║                                                                   ║
+║  📋 CRM: Prospectos → Clientes → Pagos → IMSS → Vigencia          ║
+║                                                                   ║
 ║  ENDPOINTS:                                                       ║
 ║  🌐 Dashboard:        http://localhost:${PORT}                       ║
 ║  📡 API:              http://localhost:${PORT}/api                   ║
-║  🏢 Divisiones:       http://localhost:${PORT}/api/divisiones        ║
-║  📅 Períodos:         http://localhost:${PORT}/api/periodos-pago     ║
-║  💬 Chat Web:         http://localhost:${PORT}/api/chat              ║
-║  👍 Feedback:         http://localhost:${PORT}/api/feedback          ║
+║  📋 CRM Dashboard:    http://localhost:${PORT}/api/crm/dashboard     ║
+║  👥 Prospectos:       http://localhost:${PORT}/api/crm/prospectos    ║
+║  🧑‍💼 Clientes:         http://localhost:${PORT}/api/crm/clientes      ║
+║  💰 Pagos:            http://localhost:${PORT}/api/crm/pagos         ║
 ║  📞 Twilio Voice:     http://localhost:${PORT}/api/twilio/voice      ║
 ║  📱 WhatsApp:         http://localhost:${PORT}/api/whatsapp/webhook  ║
 ║                                                                   ║
-║  UMA 2025: $113.14 | Tope: $2,828.50 diarios                      ║
+║  UMA 2026: $117.31 | Tope: $2,932.75 diarios                      ║
 ╚═══════════════════════════════════════════════════════════════════╝
   `);
 });

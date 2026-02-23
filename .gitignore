@@ -10,8 +10,16 @@ client/node_modules/
 # Settings (credenciales sensibles)
 server/data/settings.json
 
-# Build
-client/dist/
+# NO ignorar client/dist/ para Railway
+# client/dist/
+
+# Archivos grandes
+*.xlsx
+*.xlsm
+*.pdf
+
+# Windows null file
+nul
 
 # Logs
 logs/

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import CRM from './CRM'
 
 const UMA_2025 = 113.14
 const TOPE_25_UMAS = 25 * UMA_2025
@@ -655,6 +656,9 @@ function App() {
         <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>
           Info Legal
         </button>
+        <button className={activeTab === 'crm' ? 'active' : ''} onClick={() => setActiveTab('crm')}>
+          CRM
+        </button>
         <button className={activeTab === 'config' ? 'active' : ''} onClick={() => setActiveTab('config')}>
           Config
         </button>
@@ -1268,6 +1272,10 @@ function App() {
               <p><strong>Tope salarial (25 UMAs):</strong> $2,828.50 diarios = $84,855 mensuales</p>
             </div>
           </div>
+        )}
+
+        {activeTab === 'crm' && (
+          <CRM />
         )}
 
         {activeTab === 'config' && (
