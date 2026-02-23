@@ -9,25 +9,38 @@ import { calcularModalidad33 } from './calculadora-mod33.js';
 import { buscarEnBaseConocimiento } from './rag/knowledge-base.js';
 import { SYSTEM_PROMPT_IMSS, FLUJO_DIAGNOSTICO } from './rag/agent-prompt.js';
 import { generarPromptEntrenamiento } from './training.js';
+import settings from './settings.js';
 import db from './database.js';
 import feedbackService from './feedback.js';
 
-// Configuración del modelo
-const LLM_PROVIDER = process.env.LLM_PROVIDER || 'openai'; // 'openai', 'anthropic', 'groq'
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
+// Obtener API keys (primero de settings, luego de env)
+function getApiKeys() {
+  const apiKeys = settings.obtenerApiKeys();
+  return {
+    llm: apiKeys.llm || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GROQ_API_KEY,
+    provider: apiKeys.llm?.startsWith('sk-ant') ? 'anthropic' :
+              apiKeys.llm?.startsWith('gsk_') ? 'groq' :
+              process.env.LLM_PROVIDER || 'openai'
+  };
+}
 
 // Llamar al LLM
 async function llamarLLM(mensajes, opciones = {}) {
+  const { llm: apiKey, provider } = getApiKeys();
+
+  if (!apiKey) {
+    console.error('❌ No hay API Key de LLM configurada');
+    throw new Error('No hay API Key de LLM configurada. Ve a Configuración > API Keys y agrega tu clave.');
+  }
+
   const modelo = opciones.modelo || 'gpt-4o-mini';
 
-  if (LLM_PROVIDER === 'anthropic' || modelo.includes('claude')) {
-    return llamarClaude(mensajes, opciones);
-  } else if (LLM_PROVIDER === 'groq') {
-    return llamarGroq(mensajes, opciones);
+  if (provider === 'anthropic' || modelo.includes('claude') || apiKey.startsWith('sk-ant')) {
+    return llamarClaude(mensajes, { ...opciones, apiKey });
+  } else if (provider === 'groq' || apiKey.startsWith('gsk_')) {
+    return llamarGroq(mensajes, { ...opciones, apiKey });
   } else {
-    return llamarOpenAI(mensajes, opciones);
+    return llamarOpenAI(mensajes, { ...opciones, apiKey });
   }
 }
 
@@ -35,7 +48,7 @@ async function llamarOpenAI(mensajes, opciones) {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Authorization': `Bearer ${opciones.apiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -47,6 +60,9 @@ async function llamarOpenAI(mensajes, opciones) {
   });
 
   const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || 'Error en OpenAI API');
+  }
   return data.choices[0].message.content;
 }
 
@@ -57,7 +73,7 @@ async function llamarClaude(mensajes, opciones) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
+      'x-api-key': opciones.apiKey,
       'anthropic-version': '2023-06-01',
       'Content-Type': 'application/json'
     },
@@ -73,6 +89,9 @@ async function llamarClaude(mensajes, opciones) {
   });
 
   const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || 'Error en Anthropic API');
+  }
   return data.content[0].text;
 }
 
@@ -80,7 +99,7 @@ async function llamarGroq(mensajes, opciones) {
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
+      'Authorization': `Bearer ${opciones.apiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -91,6 +110,9 @@ async function llamarGroq(mensajes, opciones) {
   });
 
   const data = await response.json();
+  if (data.error) {
+    throw new Error(data.error.message || 'Error en Groq API');
+  }
   return data.choices[0].message.content;
 }
 

@@ -442,9 +442,25 @@ function App() {
         }
 
       case 'regimen':
+        const msgRegimen = mensaje.toLowerCase()
+        // Detectar si nunca ha trabajado/cotizado
+        if (msgRegimen.includes('nunca') || msgRegimen.includes('no he trabajado') ||
+            msgRegimen.includes('no he cotizado') || msgRegimen.includes('primera vez') ||
+            msgRegimen.includes('extranjero') || msgRegimen.includes('colombiano') ||
+            msgRegimen.includes('venezolano') || msgRegimen.includes('no tengo semanas')) {
+          return {
+            mensaje: `Entiendo que no tienes historial de cotizaciones en el IMSS. En este caso, la **Modalidad 40 no está disponible** para ti (requiere cotizaciones previas).\n\nPero tienes estas opciones:\n\n1️⃣ **Modalidad 10**: Si vas a trabajar de forma independiente (freelance, negocio propio). Incluye servicio médico + acumulas semanas para pensión. Costo: ~$2,400/mes.\n\n2️⃣ **Trabajadoras del Hogar**: Si trabajarás en un hogar (limpieza, cuidado, jardinería), tu patrón DEBE inscribirte obligatoriamente.\n\n3️⃣ **Empleo formal**: Conseguir trabajo donde el patrón te inscriba.\n\n¿Cuál es tu situación laboral actual o planeada?`,
+            nuevoContexto: { sinHistorial: true, regimen: 'nuevo' },
+            siguientePaso: 'opciones_sin_historial'
+          }
+        }
+
         const año = parseInt(mensaje)
         if (isNaN(año) || año < 1940 || año > 2024) {
-          return { mensaje: 'Por favor, ingresa un año válido (ejemplo: 1995)' }
+          return {
+            mensaje: 'Para orientarte mejor, necesito saber: ¿Alguna vez has cotizado al IMSS? Si es así, ¿en qué año aproximadamente comenzaste? Si nunca has cotizado, escribe "nunca".',
+            siguientePaso: 'regimen'
+          }
         }
         const regimen = año < 1997 ? 'ley73' : 'ley97'
         return {
@@ -608,6 +624,63 @@ function App() {
         return {
           mensaje: 'Puedo ayudarte con preguntas sobre:\n- Requisitos de Modalidad 40\n- Diferencias entre Ley 73 y Ley 97\n- Cálculo de pensiones\n- Cuotas y aportaciones\n\n¿Qué te gustaría saber?'
         }
+
+      case 'opciones_sin_historial':
+        const msgOpcion = mensaje.toLowerCase()
+        if (msgOpcion.includes('modalidad 10') || msgOpcion.includes('mod 10') || msgOpcion.includes('independiente') || msgOpcion.includes('freelance') || msgOpcion.includes('negocio')) {
+          return {
+            mensaje: `¡La **Modalidad 10** es ideal para ti!\n\n**Beneficios:**\n✅ Servicio médico completo en IMSS\n✅ Acumulas semanas para tu pensión\n✅ Puedes elegir tu salario de cotización\n\n**Costo aproximado con salario de $13,000/mes:**\n💰 ~$2,420/mes (cuotas patronales + obrero)\n\n**Para inscribirte necesitas:**\n1. Acudir a la subdelegación IMSS de tu zona\n2. Llevar identificación oficial, CURP, comprobante de domicilio\n3. Llenar solicitud de inscripción voluntaria\n\n¿Te gustaría que calcule el costo exacto según el salario que deseas registrar?`,
+            nuevoContexto: { opcionElegida: 'mod10' },
+            siguientePaso: 'calcular_mod10'
+          }
+        }
+        if (msgOpcion.includes('hogar') || msgOpcion.includes('domestico') || msgOpcion.includes('limpieza') || msgOpcion.includes('cuidado') || msgOpcion.includes('patron')) {
+          return {
+            mensaje: `**Trabajadoras del Hogar** es la opción si trabajas en un hogar.\n\n**Importante:** Desde 2022 es **OBLIGATORIO** que tu patrón (empleador) te inscriba.\n\n**Beneficios:**\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ Incapacidades pagadas\n✅ Acceso a guarderías IMSS\n\n**El patrón debe:**\n1. Registrarse como empleador en el portal IMSS\n2. Inscribirte con tu CURP y datos\n3. Pagar las cuotas según tus días trabajados\n\nSi tu patrón no te quiere inscribir, puedes denunciarlo en PROFEDET o acudir al IMSS.\n\n¿Tu empleador ya te inscribió o necesitas orientación?`,
+            nuevoContexto: { opcionElegida: 'hogar' },
+            siguientePaso: 'completado'
+          }
+        }
+        if (msgOpcion.includes('empleo') || msgOpcion.includes('trabajo formal') || msgOpcion.includes('empresa')) {
+          return {
+            mensaje: `Si consigues un **empleo formal**, tu patrón está obligado a inscribirte al IMSS desde el primer día.\n\n**Beneficios:**\n✅ El patrón paga la mayor parte de las cuotas\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ INFONAVIT (crédito vivienda)\n✅ AFORE (ahorro para retiro)\n\n**Consejos:**\n- Verifica que te den de alta (consulta en IMSS Digital)\n- Guarda tus recibos de nómina\n- Revisa que el salario registrado sea el correcto\n\n¿Hay algo más que pueda ayudarte?`,
+            nuevoContexto: { opcionElegida: 'formal' },
+            siguientePaso: 'completado'
+          }
+        }
+        return {
+          mensaje: 'Por favor, indícame cuál opción te interesa:\n\n1️⃣ **Modalidad 10** - Si serás trabajador independiente\n2️⃣ **Trabajadoras del Hogar** - Si trabajarás en un hogar\n3️⃣ **Empleo formal** - Si buscarás trabajo en una empresa',
+          siguientePaso: 'opciones_sin_historial'
+        }
+
+      case 'calcular_mod10':
+        const salarioMod10 = parseFloat(mensaje.replace(/[,$]/g, ''))
+        if (isNaN(salarioMod10) || salarioMod10 < 1000) {
+          return { mensaje: '¿Con qué salario mensual te gustaría cotizar? (ejemplo: 15000)' }
+        }
+        try {
+          const resMod10 = await fetch('/api/calcular-mod10', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              salarioMensual: salarioMod10,
+              claseRiesgo: 'I',
+              incluirInfonavit: false
+            })
+          })
+          const dataMod10 = await resMod10.json()
+          if (dataMod10.success) {
+            const r = dataMod10.data
+            return {
+              mensaje: `## 📊 Cálculo Modalidad 10\n\n**Salario mensual:** $${salarioMod10.toLocaleString()}\n\n**Cuotas mensuales:**\n- Cuota patrón: $${r.totales.patron.toLocaleString()}\n- Cuota obrero: $${r.totales.obrero.toLocaleString()}\n- **TOTAL: $${r.totales.mensualSinInfonavit.toLocaleString()}/mes**\n\n**Costo anual:** $${r.totales.anualSinInfonavit.toLocaleString()}\n\n✅ Incluye servicio médico completo\n✅ Acumulas 52 semanas por año\n\n¿Te gustaría saber cómo inscribirte?`,
+              nuevoContexto: { calculoMod10: r },
+              siguientePaso: 'completado'
+            }
+          }
+        } catch (e) {
+          return { mensaje: 'Hubo un error al calcular. Por favor intenta de nuevo.' }
+        }
+        break
 
       default:
         return {
