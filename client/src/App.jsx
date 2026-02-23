@@ -1748,19 +1748,25 @@ function App() {
               <h3>Numeros de Telefono</h3>
 
               <div className="numeros-lista">
-                {settingsData.numeros.map(num => (
-                  <div key={num.id} className="numero-item">
-                    <span className="numero-icono">
-                      {num.tipo === 'voz' && '📞'}
-                      {num.tipo === 'whatsapp' && '📱'}
-                      {num.tipo === 'telegram' && '🤖'}
-                    </span>
-                    <span className="numero-nombre">{num.nombre}</span>
-                    <span className="numero-valor">{num.numero}</span>
-                    <span className={`numero-tipo ${num.tipo}`}>{num.tipo}</span>
-                    <button className="numero-delete" onClick={() => eliminarNumero(num.id)}>X</button>
-                  </div>
-                ))}
+                {settingsData.numeros.map(num => {
+                  const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
+                    ? twilioStatus.conectado
+                    : (num.tipo === 'telegram' ? telegramStatus.conectado : false)
+                  return (
+                    <div key={num.id} className={`numero-item ${estaConectado ? 'conectado' : 'desconectado'}`}>
+                      <span className={`numero-status ${estaConectado ? 'online' : 'offline'}`}></span>
+                      <span className="numero-icono">
+                        {num.tipo === 'voz' && '📞'}
+                        {num.tipo === 'whatsapp' && '📱'}
+                        {num.tipo === 'telegram' && '🤖'}
+                      </span>
+                      <span className="numero-nombre">{num.nombre}</span>
+                      <span className="numero-valor">{num.numero}</span>
+                      <span className={`numero-tipo ${num.tipo}`}>{num.tipo}</span>
+                      <button className="numero-delete" onClick={() => eliminarNumero(num.id)}>X</button>
+                    </div>
+                  )
+                })}
                 {settingsData.numeros.length === 0 && (
                   <p className="empty-state">No hay numeros configurados</p>
                 )}
