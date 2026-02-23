@@ -757,13 +757,45 @@ app.post('/api/settings/telegram', async (req, res) => {
 // Guardar API Keys
 app.post('/api/settings/apikeys', (req, res) => {
   try {
-    const { vision, voz, llm, browser } = req.body;
-    const ok = settings.guardarApiKeys({ vision, voz, llm, browser });
+    const { vision, voz, llm, llmClaude, llmGemini, browser } = req.body;
+    const ok = settings.guardarApiKeys({ vision, voz, llm, llmClaude, llmGemini, browser });
 
     if (ok) {
       res.json({ success: true, mensaje: 'API Keys guardadas' });
     } else {
       res.status(500).json({ error: 'Error guardando API Keys' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar configuración de Deepgram
+app.post('/api/settings/deepgram', (req, res) => {
+  try {
+    const { apiKey, listenModel, listenLanguage, speakModel, audioEncoding, audioSampleRate } = req.body;
+    const ok = settings.guardarDeepgram({ apiKey, listenModel, listenLanguage, speakModel, audioEncoding, audioSampleRate });
+
+    if (ok) {
+      res.json({ success: true, mensaje: 'Configuración de Deepgram guardada' });
+    } else {
+      res.status(500).json({ error: 'Error guardando configuración de Deepgram' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar configuración de LLM
+app.post('/api/settings/llm-config', (req, res) => {
+  try {
+    const { provider, temperature } = req.body;
+    const ok = settings.guardarLlmConfig({ provider, temperature });
+
+    if (ok) {
+      res.json({ success: true, mensaje: 'Configuración de LLM guardada' });
+    } else {
+      res.status(500).json({ error: 'Error guardando configuración de LLM' });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });

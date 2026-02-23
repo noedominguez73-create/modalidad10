@@ -825,6 +825,61 @@ footer {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+/* Form helpers */
+.form-group-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.provider-select {
+  font-size: 1rem;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 2px solid var(--primary);
+}
+
+.form-group input[type="range"] {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.form-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .form-group-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Numeros */
 .settings-card h3 {
   font-size: 1.1rem;

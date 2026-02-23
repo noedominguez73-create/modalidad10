@@ -27,7 +27,21 @@ const DEFAULT_SETTINGS = {
     vision: '',
     voz: '',
     llm: '',
+    llmClaude: '',
+    llmGemini: '',
     browser: ''
+  },
+  deepgram: {
+    apiKey: '',
+    listenModel: 'nova-3',
+    listenLanguage: 'es',
+    speakModel: 'aura-2-selena-es',
+    audioEncoding: 'linear16',
+    audioSampleRate: 24000
+  },
+  llmConfig: {
+    provider: 'gemini', // openai, anthropic, gemini, groq
+    temperature: 0.7
   },
   numeros: []
 };
@@ -73,7 +87,9 @@ export function guardarSettings(settings) {
  */
 export function obtenerSettingsSeguro() {
   const settings = cargarSettings();
-  const apiKeys = settings.apiKeys || { vision: '', voz: '', llm: '', browser: '' };
+  const apiKeys = settings.apiKeys || { vision: '', voz: '', llm: '', llmClaude: '', llmGemini: '', browser: '' };
+  const deepgram = settings.deepgram || { apiKey: '', listenModel: 'nova-3', listenLanguage: 'es', speakModel: 'aura-2-selena-es', audioEncoding: 'linear16', audioSampleRate: 24000 };
+  const llmConfig = settings.llmConfig || { provider: 'gemini', temperature: 0.7 };
 
   return {
     twilio: {
@@ -91,11 +107,28 @@ export function obtenerSettingsSeguro() {
       vision: apiKeys.vision ? '••••••••' + apiKeys.vision.slice(-4) : '',
       voz: apiKeys.voz ? '••••••••' + apiKeys.voz.slice(-4) : '',
       llm: apiKeys.llm ? '••••••••' + apiKeys.llm.slice(-4) : '',
+      llmClaude: apiKeys.llmClaude ? '••••••••' + apiKeys.llmClaude.slice(-4) : '',
+      llmGemini: apiKeys.llmGemini ? '••••••••' + apiKeys.llmGemini.slice(-4) : '',
       browser: apiKeys.browser ? '••••••••' + apiKeys.browser.slice(-4) : '',
       visionConfigurado: !!apiKeys.vision,
       vozConfigurado: !!apiKeys.voz,
       llmConfigurado: !!apiKeys.llm,
+      llmClaudeConfigurado: !!apiKeys.llmClaude,
+      llmGeminiConfigurado: !!apiKeys.llmGemini,
       browserConfigurado: !!apiKeys.browser
+    },
+    deepgram: {
+      apiKey: deepgram.apiKey ? '••••••••' + deepgram.apiKey.slice(-4) : '',
+      listenModel: deepgram.listenModel,
+      listenLanguage: deepgram.listenLanguage,
+      speakModel: deepgram.speakModel,
+      audioEncoding: deepgram.audioEncoding,
+      audioSampleRate: deepgram.audioSampleRate,
+      configurado: !!deepgram.apiKey
+    },
+    llmConfig: {
+      provider: llmConfig.provider,
+      temperature: llmConfig.temperature
     },
     numeros: settings.numeros
   };
@@ -156,7 +189,7 @@ export function guardarTelegram(config) {
  */
 export function obtenerApiKeys() {
   const settings = cargarSettings();
-  return settings.apiKeys || { vision: '', voz: '', llm: '', browser: '' };
+  return settings.apiKeys || { vision: '', voz: '', llm: '', llmClaude: '', llmGemini: '', browser: '' };
 }
 
 /**
@@ -168,7 +201,60 @@ export function guardarApiKeys(keys) {
     vision: keys.vision !== undefined ? keys.vision : (settings.apiKeys?.vision || ''),
     voz: keys.voz !== undefined ? keys.voz : (settings.apiKeys?.voz || ''),
     llm: keys.llm !== undefined ? keys.llm : (settings.apiKeys?.llm || ''),
+    llmClaude: keys.llmClaude !== undefined ? keys.llmClaude : (settings.apiKeys?.llmClaude || ''),
+    llmGemini: keys.llmGemini !== undefined ? keys.llmGemini : (settings.apiKeys?.llmGemini || ''),
     browser: keys.browser !== undefined ? keys.browser : (settings.apiKeys?.browser || '')
+  };
+  return guardarSettings(settings);
+}
+
+/**
+ * Obtener configuración de Deepgram
+ */
+export function obtenerDeepgram() {
+  const settings = cargarSettings();
+  return settings.deepgram || {
+    apiKey: '',
+    listenModel: 'nova-3',
+    listenLanguage: 'es',
+    speakModel: 'aura-2-selena-es',
+    audioEncoding: 'linear16',
+    audioSampleRate: 24000
+  };
+}
+
+/**
+ * Guardar configuración de Deepgram
+ */
+export function guardarDeepgram(config) {
+  const settings = cargarSettings();
+  settings.deepgram = {
+    apiKey: config.apiKey !== undefined ? config.apiKey : (settings.deepgram?.apiKey || ''),
+    listenModel: config.listenModel || settings.deepgram?.listenModel || 'nova-3',
+    listenLanguage: config.listenLanguage || settings.deepgram?.listenLanguage || 'es',
+    speakModel: config.speakModel || settings.deepgram?.speakModel || 'aura-2-selena-es',
+    audioEncoding: config.audioEncoding || settings.deepgram?.audioEncoding || 'linear16',
+    audioSampleRate: config.audioSampleRate || settings.deepgram?.audioSampleRate || 24000
+  };
+  return guardarSettings(settings);
+}
+
+/**
+ * Obtener configuración de LLM
+ */
+export function obtenerLlmConfig() {
+  const settings = cargarSettings();
+  return settings.llmConfig || { provider: 'gemini', temperature: 0.7 };
+}
+
+/**
+ * Guardar configuración de LLM
+ */
+export function guardarLlmConfig(config) {
+  const settings = cargarSettings();
+  settings.llmConfig = {
+    provider: config.provider || settings.llmConfig?.provider || 'gemini',
+    temperature: config.temperature !== undefined ? config.temperature : (settings.llmConfig?.temperature || 0.7)
   };
   return guardarSettings(settings);
 }
@@ -261,6 +347,10 @@ export default {
   guardarTelegram,
   obtenerApiKeys,
   guardarApiKeys,
+  obtenerDeepgram,
+  guardarDeepgram,
+  obtenerLlmConfig,
+  guardarLlmConfig,
   obtenerNumeros,
   obtenerNumeroPorTipo,
   agregarNumero,
