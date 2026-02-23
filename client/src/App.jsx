@@ -112,6 +112,7 @@ function App() {
   const [nuevoNumero, setNuevoNumero] = useState({ nombre: '', numero: '', tipo: 'voz' })
   const [showToken, setShowToken] = useState({ twilio: false, telegram: false, vision: false, voz: false, llm: false, browser: false })
   const [settingsMsg, setSettingsMsg] = useState('')
+  const [qrModal, setQrModal] = useState({ visible: false, numero: '', nombre: '' })
 
   // Training state
   const [trainingData, setTrainingData] = useState({
@@ -1763,6 +1764,15 @@ function App() {
                       <span className="numero-nombre">{num.nombre}</span>
                       <span className="numero-valor">{num.numero}</span>
                       <span className={`numero-tipo ${num.tipo}`}>{num.tipo}</span>
+                      {num.tipo === 'whatsapp' && (
+                        <button
+                          className="numero-qr"
+                          onClick={() => setQrModal({ visible: true, numero: num.numero, nombre: num.nombre })}
+                          title="Ver QR de WhatsApp"
+                        >
+                          QR
+                        </button>
+                      )}
                       <button className="numero-delete" onClick={() => eliminarNumero(num.id)}>X</button>
                     </div>
                   )
@@ -1799,6 +1809,32 @@ function App() {
                 </div>
               </div>
             </div>
+
+            {/* Modal QR WhatsApp */}
+            {qrModal.visible && (
+              <div className="qr-modal-overlay" onClick={() => setQrModal({ visible: false, numero: '', nombre: '' })}>
+                <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
+                  <button className="qr-modal-close" onClick={() => setQrModal({ visible: false, numero: '', nombre: '' })}>×</button>
+                  <h3>WhatsApp - {qrModal.nombre || 'Asesor IMSS'}</h3>
+                  <p className="qr-numero">{qrModal.numero}</p>
+                  <div className="qr-code">
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://wa.me/${qrModal.numero.replace(/[^0-9]/g, '')}?text=Hola, necesito información sobre mi pensión IMSS`)}`}
+                      alt="QR WhatsApp"
+                    />
+                  </div>
+                  <p className="qr-instrucciones">Escanea este código con tu celular para abrir WhatsApp</p>
+                  <a
+                    href={`https://wa.me/${qrModal.numero.replace(/[^0-9]/g, '')}?text=Hola, necesito información sobre mi pensión IMSS`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="qr-link"
+                  >
+                    Abrir WhatsApp
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
