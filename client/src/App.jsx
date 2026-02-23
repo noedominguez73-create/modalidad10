@@ -597,12 +597,63 @@ function App() {
         break
 
       case 'completado':
-        if (mensaje.toLowerCase().includes('salario') || mensaje.toLowerCase().includes('más alto') || mensaje.toLowerCase().includes('escenario')) {
+        const msgCompletado = mensaje.toLowerCase()
+
+        // Orientación para Trabajadoras del Hogar
+        if (msgCompletado.includes('orientacion') || msgCompletado.includes('orientación') || msgCompletado.includes('como me inscribo') || msgCompletado.includes('ayuda')) {
+          if (contexto.opcionElegida === 'hogar') {
+            return {
+              mensaje: `**Orientación para Trabajadoras del Hogar:**\n\n**Si tu patrón NO te quiere inscribir:**\n1. 📞 Llama a PROFEDET: 800-911-7877 (gratis)\n2. 🏢 Acude a la subdelegación IMSS más cercana\n3. 📋 Presenta queja formal con tus datos y los del empleador\n\n**Documentos que necesitas:**\n- Tu CURP\n- Identificación oficial (INE)\n- Comprobante de domicilio\n- Datos de tu empleador (nombre, dirección, teléfono)\n\n**Portal para patrones:**\nhttps://serviciosdigitales.imss.gob.mx/portal-empleador/\n\n¿Tu patrón está dispuesto a inscribirte o necesitas denunciarlo?`
+            }
+          }
           return {
-            mensaje: 'Para simular diferentes salarios, ve a la pestaña **"Calculadora"** donde puedes ajustar todos los parámetros.\n\n¿Hay algo más que te gustaría saber sobre la Modalidad 40 o las pensiones del IMSS?'
+            mensaje: `¿En qué necesitas orientación?\n\n1️⃣ **Modalidad 40** - Para mejorar tu pensión\n2️⃣ **Modalidad 10** - Para trabajadores independientes\n3️⃣ **Trabajadoras del Hogar** - Si trabajas en un hogar\n4️⃣ **Pensiones IMSS** - Requisitos y cálculos\n\nEscribe el número o el tema que te interesa.`
           }
         }
-        // Buscar en base de conocimiento
+
+        // Cuotas y aportaciones
+        if (msgCompletado.includes('cuota') || msgCompletado.includes('aportacion') || msgCompletado.includes('costo') || msgCompletado.includes('precio') || msgCompletado.includes('pago')) {
+          return {
+            mensaje: `**Cuotas y Aportaciones IMSS 2025:**\n\n**Modalidad 40** (solo pensión, sin servicio médico):\n- Cuota: **10.075%** del salario mensual\n- Ejemplo: Salario $20,000 → Pago ~$2,015/mes\n- Tope máximo: 25 UMAs (~$84,855/mes)\n\n**Modalidad 10** (servicio médico + pensión):\n- Incluye cuotas patrón + obrero\n- Ejemplo: Salario $13,000 → Pago ~$2,420/mes\n- Incluye IMSS completo\n\n**Trabajadoras del Hogar:**\n- El patrón paga según días trabajados por semana\n- 1 día/semana: ~$250/mes\n- 5 días/semana: ~$1,100/mes\n\n¿Te gustaría calcular tu cuota específica? Ve a las pestañas **Mod 40** o **Mod 10** para usar la calculadora.`
+          }
+        }
+
+        // Requisitos
+        if (msgCompletado.includes('requisito') || msgCompletado.includes('necesito para') || msgCompletado.includes('que ocupo')) {
+          return {
+            mensaje: `**Requisitos por modalidad:**\n\n**Modalidad 40:**\n- Mínimo 52 semanas cotizadas en últimos 5 años\n- No tener patrón actual\n- Inscribirte dentro de 5 años de tu última baja\n\n**Modalidad 10:**\n- Ser mayor de 18 años\n- No tener patrón\n- Acudir a subdelegación IMSS con INE, CURP y comprobante domicilio\n\n**Trabajadoras del Hogar:**\n- El patrón debe registrarse en portal IMSS\n- Proporcionar CURP del trabajador\n- Indicar días trabajados por semana\n\n¿Sobre cuál modalidad necesitas más detalles?`
+          }
+        }
+
+        // Diferencias Ley 73 vs 97
+        if (msgCompletado.includes('ley 73') || msgCompletado.includes('ley 97') || msgCompletado.includes('diferencia') || msgCompletado.includes('cual es mejor')) {
+          return {
+            mensaje: `**Diferencias Ley 73 vs Ley 97:**\n\n**Ley 73** (cotizaste ANTES de julio 1997):\n✅ Pensión vitalicia garantizada por el gobierno\n✅ Se calcula por semanas + salario promedio\n✅ Más favorable para pensión\n\n**Ley 97** (cotizaste DESPUÉS de julio 1997):\n⚠️ Pensión depende de tu AFORE\n⚠️ Se calcula por ahorro acumulado\n⚠️ Generalmente menor pensión\n\n**¿Puedo elegir?**\nSi cotizaste en AMBOS períodos, puedes elegir la más conveniente (casi siempre Ley 73).\n\n¿Sabes bajo qué ley cotizaste? Si no, dime en qué año empezaste a trabajar.`
+          }
+        }
+
+        // Pensión
+        if (msgCompletado.includes('pension') || msgCompletado.includes('pensión') || msgCompletado.includes('jubilar') || msgCompletado.includes('retirar')) {
+          return {
+            mensaje: `**Información sobre Pensiones IMSS:**\n\n**Requisitos mínimos:**\n- 500 semanas cotizadas (Ley 73)\n- 60 años de edad (cesantía) o 65 años (vejez)\n\n**Factores que aumentan tu pensión:**\n- Más semanas cotizadas\n- Mayor salario promedio de últimos 5 años\n- Retirarte a los 65 en lugar de 60\n\n**Modalidad 40 te ayuda a:**\n- Completar semanas faltantes\n- Aumentar tu salario de cotización (hasta 25 UMAs)\n- Mejorar significativamente tu pensión\n\n¿Quieres calcular tu pensión estimada? Ve a la pestaña **Mod 40** y usa la calculadora.`
+          }
+        }
+
+        // Salarios
+        if (msgCompletado.includes('salario') || msgCompletado.includes('más alto') || msgCompletado.includes('escenario') || msgCompletado.includes('uma')) {
+          return {
+            mensaje: `**Salarios en Modalidad 40:**\n\n**Puedes registrar un salario MAYOR al que tenías:**\n- Mínimo: 1 UMA ($113.14/día = $3,394/mes)\n- Máximo: 25 UMAs ($2,828/día = $84,855/mes)\n\n**¿Conviene registrar el máximo?**\nDepende de cuántos años te faltan para jubilarte:\n- Menos de 3 años: El costo puede no recuperarse\n- 3-5 años: Generalmente conviene\n- Más de 5 años: Muy rentable\n\nPara simular diferentes salarios, ve a la pestaña **"Mod 40"** y usa la calculadora.\n\n¿Te gustaría que te oriente sobre qué salario te conviene?`
+          }
+        }
+
+        // Si tiene contexto de Trabajadoras del Hogar, mantenerlo relevante
+        if (contexto.opcionElegida === 'hogar') {
+          return {
+            mensaje: `¿En qué más puedo ayudarte sobre **Trabajadoras del Hogar**?\n\n- ¿Cómo inscribirme?\n- ¿Cuánto debe pagar mi patrón?\n- ¿Qué hacer si no me quieren inscribir?\n- ¿Qué beneficios tengo?\n\nO si prefieres, pregúntame sobre otro tema.`
+          }
+        }
+
+        // Buscar en base de conocimiento como respaldo
         try {
           const res = await fetch('/api/rag/buscar', {
             method: 'POST',
@@ -622,7 +673,7 @@ function App() {
         }
 
         return {
-          mensaje: 'Puedo ayudarte con preguntas sobre:\n- Requisitos de Modalidad 40\n- Diferencias entre Ley 73 y Ley 97\n- Cálculo de pensiones\n- Cuotas y aportaciones\n\n¿Qué te gustaría saber?'
+          mensaje: '¿En qué puedo ayudarte?\n\n1️⃣ **Cuotas y costos** - Cuánto pagar en cada modalidad\n2️⃣ **Requisitos** - Qué necesitas para inscribirte\n3️⃣ **Pensiones** - Cálculo y proyección\n4️⃣ **Ley 73 vs 97** - Diferencias y cuál te conviene\n\nEscribe el número o tu pregunta.'
         }
 
       case 'opciones_sin_historial':
