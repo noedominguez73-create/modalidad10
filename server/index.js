@@ -10,6 +10,7 @@ import db from './database.js';
 import feedback from './feedback.js';
 import settings from './settings.js';
 import crm from './crm/index.js';
+import training from './training.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -832,6 +833,176 @@ app.delete('/api/settings/numeros/:id', (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// ENTRENAMIENTO DEL AGENTE IA
+// ============================================
+
+// Obtener todo el entrenamiento
+app.get('/api/training', (req, res) => {
+  try {
+    const data = training.obtenerTraining();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- REGLAS ---
+app.post('/api/training/reglas', (req, res) => {
+  try {
+    const regla = training.agregarRegla(req.body);
+    res.json({ success: true, data: regla });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/training/reglas/:id', (req, res) => {
+  try {
+    const regla = training.actualizarRegla(req.params.id, req.body);
+    if (!regla) {
+      return res.status(404).json({ success: false, error: 'Regla no encontrada' });
+    }
+    res.json({ success: true, data: regla });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/training/reglas/:id', (req, res) => {
+  try {
+    const eliminado = training.eliminarRegla(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ success: false, error: 'Regla no encontrada' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- FAQ ---
+app.post('/api/training/faq', (req, res) => {
+  try {
+    const faq = training.agregarFaq(req.body);
+    res.json({ success: true, data: faq });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/training/faq/:id', (req, res) => {
+  try {
+    const faq = training.actualizarFaq(req.params.id, req.body);
+    if (!faq) {
+      return res.status(404).json({ success: false, error: 'FAQ no encontrada' });
+    }
+    res.json({ success: true, data: faq });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/training/faq/:id', (req, res) => {
+  try {
+    const eliminado = training.eliminarFaq(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ success: false, error: 'FAQ no encontrada' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- CONOCIMIENTO ---
+app.post('/api/training/conocimiento', (req, res) => {
+  try {
+    const conocimiento = training.agregarConocimiento(req.body);
+    res.json({ success: true, data: conocimiento });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/training/conocimiento/:id', (req, res) => {
+  try {
+    const conocimiento = training.actualizarConocimiento(req.params.id, req.body);
+    if (!conocimiento) {
+      return res.status(404).json({ success: false, error: 'Conocimiento no encontrado' });
+    }
+    res.json({ success: true, data: conocimiento });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/training/conocimiento/:id', (req, res) => {
+  try {
+    const eliminado = training.eliminarConocimiento(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ success: false, error: 'Conocimiento no encontrado' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- EJEMPLOS ---
+app.post('/api/training/ejemplos', (req, res) => {
+  try {
+    const ejemplo = training.agregarEjemplo(req.body);
+    res.json({ success: true, data: ejemplo });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/training/ejemplos/:id', (req, res) => {
+  try {
+    const ejemplo = training.actualizarEjemplo(req.params.id, req.body);
+    if (!ejemplo) {
+      return res.status(404).json({ success: false, error: 'Ejemplo no encontrado' });
+    }
+    res.json({ success: true, data: ejemplo });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/training/ejemplos/:id', (req, res) => {
+  try {
+    const eliminado = training.eliminarEjemplo(req.params.id);
+    if (!eliminado) {
+      return res.status(404).json({ success: false, error: 'Ejemplo no encontrado' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// --- CONFIGURACION DEL AGENTE ---
+app.put('/api/training/configuracion', (req, res) => {
+  try {
+    const config = training.actualizarConfiguracion(req.body);
+    res.json({ success: true, data: config });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener prompt generado (para debug)
+app.get('/api/training/prompt', (req, res) => {
+  try {
+    const prompt = training.generarPromptEntrenamiento();
+    res.json({ success: true, data: prompt });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

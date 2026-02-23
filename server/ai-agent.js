@@ -8,6 +8,7 @@ import { calcularModalidad10 } from './calculadora-mod10.js';
 import { calcularModalidad33 } from './calculadora-mod33.js';
 import { buscarEnBaseConocimiento } from './rag/knowledge-base.js';
 import { SYSTEM_PROMPT_IMSS, FLUJO_DIAGNOSTICO } from './rag/agent-prompt.js';
+import { generarPromptEntrenamiento } from './training.js';
 import db from './database.js';
 import feedbackService from './feedback.js';
 
@@ -144,6 +145,8 @@ ${JSON.stringify(datosUsuario, null, 2)}
 PASO ACTUAL DEL FLUJO: ${pasoActual}
 CANAL DE COMUNICACIÓN: ${canal}
 ${seccionFeedback}
+${generarPromptEntrenamiento()}
+
 INSTRUCCIONES ESPECIALES SEGÚN CANAL:
 ${canal === 'telefono' ? '- Respuestas cortas y claras para voz. Máximo 2-3 oraciones.' : ''}
 ${canal === 'whatsapp' ? '- Puedes usar emojis. Divide información larga en mensajes cortos.' : ''}
