@@ -1477,136 +1477,186 @@ function App() {
 
             {settingsMsg && <div className="settings-msg">{settingsMsg}</div>}
 
+            {/* Estado de Servicios - Solo lectura */}
             <div className="settings-card">
-              <div className="settings-header">
-                <h3>Twilio (Voz / WhatsApp)</h3>
-                <span className={`status-badge ${twilioStatus.conectado ? 'connected' : 'disconnected'}`}>
-                  {twilioStatus.conectado ? 'Conectado' : 'Desconectado'}
-                </span>
-              </div>
+              <h3>Estado de Servicios</h3>
+              <p className="form-hint">Las API Keys se configuran en las variables de entorno de Railway</p>
 
-              <div className="form-group">
-                <label>Account SID</label>
-                <input
-                  type="text"
-                  value={settingsData.twilio.accountSid}
-                  onChange={(e) => setSettingsData(prev => ({
-                    ...prev,
-                    twilio: { ...prev.twilio, accountSid: e.target.value }
-                  }))}
-                  placeholder="AC..."
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Auth Token</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.twilio ? 'text' : 'password'}
-                    value={settingsData.twilio.authToken}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      twilio: { ...prev.twilio, authToken: e.target.value }
-                    }))}
-                    placeholder="Token de autenticacion"
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, twilio: !prev.twilio }))}>
-                    {showToken.twilio ? 'Ocultar' : 'Mostrar'}
-                  </button>
+              <div className="services-status">
+                <div className="service-item">
+                  <span className="service-name">Twilio (Voz/WhatsApp)</span>
+                  <span className={`status-badge ${twilioStatus.conectado ? 'connected' : 'disconnected'}`}>
+                    {twilioStatus.conectado ? 'Conectado' : 'No configurado'}
+                  </span>
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Webhook URL</label>
-                <input
-                  type="text"
-                  value={settingsData.twilio.webhookBaseUrl}
-                  onChange={(e) => setSettingsData(prev => ({
-                    ...prev,
-                    twilio: { ...prev.twilio, webhookBaseUrl: e.target.value }
-                  }))}
-                  placeholder="https://tu-dominio.com"
-                />
+                <div className="service-item">
+                  <span className="service-name">Telegram</span>
+                  <span className={`status-badge ${telegramStatus.conectado ? 'connected' : 'disconnected'}`}>
+                    {telegramStatus.conectado ? 'Conectado' : 'No configurado'}
+                  </span>
+                </div>
+                <div className="service-item">
+                  <span className="service-name">Deepgram (Voz IA)</span>
+                  <span className={`status-badge ${settingsData.deepgram?.configurado ? 'connected' : 'disconnected'}`}>
+                    {settingsData.deepgram?.configurado ? 'Conectado' : 'No configurado'}
+                  </span>
+                </div>
+                <div className="service-item">
+                  <span className="service-name">LLM (IA Conversacional)</span>
+                  <span className={`status-badge ${settingsData.apiKeys?.llmGeminiConfigurado || settingsData.apiKeys?.llmClaudeConfigurado ? 'connected' : 'disconnected'}`}>
+                    {settingsData.apiKeys?.llmGeminiConfigurado || settingsData.apiKeys?.llmClaudeConfigurado ? 'Conectado' : 'No configurado'}
+                  </span>
+                </div>
               </div>
 
               <div className="settings-actions">
-                <button onClick={probarTwilio} disabled={twilioStatus.cargando}>
-                  {twilioStatus.cargando ? 'Probando...' : 'Probar'}
+                <button onClick={() => { probarTwilio(); probarTelegram(); }}>
+                  Verificar Conexiones
                 </button>
-                <button onClick={guardarTwilio} className="primary">Guardar</button>
               </div>
-
-              {twilioStatus.cuenta && (
-                <div className="status-info success">
-                  Cuenta: {twilioStatus.cuenta.nombre} ({twilioStatus.cuenta.estado})
-                </div>
-              )}
-              {twilioStatus.error && (
-                <div className="status-info error">{twilioStatus.error}</div>
-              )}
             </div>
 
+            {/* Canales de Comunicación - Números */}
             <div className="settings-card">
-              <div className="settings-header">
-                <h3>Telegram</h3>
-                <span className={`status-badge ${telegramStatus.conectado ? 'connected' : 'disconnected'}`}>
-                  {telegramStatus.conectado ? 'Conectado' : 'Desconectado'}
-                </span>
+              <h3>Canales de Comunicacion</h3>
+              <p className="form-hint">Configura los números de teléfono para cada canal</p>
+
+              <div className="numeros-lista">
+                {settingsData.numeros.map(num => {
+                  const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
+                    ? twilioStatus.conectado
+                    : (num.tipo === 'telegram' ? telegramStatus.conectado : false)
+                  return (
+                    <div key={num.id} className={`numero-item ${estaConectado ? 'conectado' : 'desconectado'}`}>
+                      <span className={`numero-status ${estaConectado ? 'online' : 'offline'}`}></span>
+                      <span className="numero-icono">
+                        {num.tipo === 'voz' && '📞'}
+                        {num.tipo === 'whatsapp' && '📱'}
+                        {num.tipo === 'telegram' && '🤖'}
+                      </span>
+                      <span className="numero-nombre">{num.nombre}</span>
+                      <span className="numero-valor">{num.numero}</span>
+                      <span className={`numero-tipo ${num.tipo}`}>{num.tipo}</span>
+                      {num.tipo === 'whatsapp' && (
+                        <button
+                          className="numero-qr"
+                          onClick={() => setQrModal({ visible: true, numero: num.numero, nombre: num.nombre })}
+                          title="Ver QR de WhatsApp"
+                        >
+                          QR
+                        </button>
+                      )}
+                      <button className="numero-delete" onClick={() => eliminarNumero(num.id)}>X</button>
+                    </div>
+                  )
+                })}
+                {settingsData.numeros.length === 0 && (
+                  <p className="empty-state">No hay numeros configurados</p>
+                )}
               </div>
 
-              <div className="form-group">
-                <label>Bot Token</label>
-                <div className="input-with-toggle">
+              <div className="agregar-numero">
+                <h4>Agregar Numero</h4>
+                <div className="numero-form">
                   <input
-                    type={showToken.telegram ? 'text' : 'password'}
-                    value={settingsData.telegram.botToken}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      telegram: { ...prev.telegram, botToken: e.target.value }
-                    }))}
-                    placeholder="123456789:ABC..."
+                    type="text"
+                    placeholder="Nombre (ej: WhatsApp México)"
+                    value={nuevoNumero.nombre}
+                    onChange={(e) => setNuevoNumero(prev => ({ ...prev, nombre: e.target.value }))}
                   />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, telegram: !prev.telegram }))}>
-                    {showToken.telegram ? 'Ocultar' : 'Mostrar'}
-                  </button>
+                  <input
+                    type="text"
+                    placeholder="Numero (+52...) o @usuario"
+                    value={nuevoNumero.numero}
+                    onChange={(e) => setNuevoNumero(prev => ({ ...prev, numero: e.target.value }))}
+                  />
+                  <select
+                    value={nuevoNumero.tipo}
+                    onChange={(e) => setNuevoNumero(prev => ({ ...prev, tipo: e.target.value }))}
+                  >
+                    <option value="voz">Llamadas (Twilio)</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="telegram">Telegram</option>
+                  </select>
+                  <button onClick={agregarNumero}>Agregar</button>
                 </div>
               </div>
+            </div>
+
+            {/* Configuración de Voz */}
+            <div className="settings-card">
+              <h3>Configuracion de Voz</h3>
+              <p className="form-hint">Selecciona la voz y modelo para las llamadas telefónicas</p>
 
               <div className="form-group">
-                <label>Bot Username</label>
-                <input
-                  type="text"
-                  value={settingsData.telegram.botUsername}
+                <label>Voz del Asistente (TTS)</label>
+                <select
+                  value={settingsData.deepgram?.speakModel || 'aura-2-selena-es'}
                   onChange={(e) => setSettingsData(prev => ({
                     ...prev,
-                    telegram: { ...prev.telegram, botUsername: e.target.value }
+                    deepgram: { ...prev.deepgram, speakModel: e.target.value }
                   }))}
-                  placeholder="@mi_bot"
-                />
+                  className="provider-select"
+                >
+                  <optgroup label="Voces Femeninas">
+                    <option value="aura-2-selena-es">Selena (Recomendada)</option>
+                    <option value="aura-2-luna-es">Luna</option>
+                    <option value="aura-2-estrella-es">Estrella</option>
+                    <option value="aura-2-diana-es">Diana</option>
+                    <option value="aura-2-carina-es">Carina</option>
+                    <option value="aura-2-aquila-es">Aquila</option>
+                  </optgroup>
+                  <optgroup label="Voces Masculinas">
+                    <option value="aura-2-javier-es">Javier</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="form-group-row">
+                <div className="form-group">
+                  <label>Modelo de Reconocimiento (STT)</label>
+                  <select
+                    value={settingsData.deepgram?.listenModel || 'nova-3'}
+                    onChange={(e) => setSettingsData(prev => ({
+                      ...prev,
+                      deepgram: { ...prev.deepgram, listenModel: e.target.value }
+                    }))}
+                  >
+                    <option value="nova-3">Nova 3 (Mejor calidad)</option>
+                    <option value="nova-2">Nova 2</option>
+                    <option value="enhanced">Enhanced</option>
+                    <option value="base">Base (Más rápido)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Idioma</label>
+                  <select
+                    value={settingsData.deepgram?.listenLanguage || 'es'}
+                    onChange={(e) => setSettingsData(prev => ({
+                      ...prev,
+                      deepgram: { ...prev.deepgram, listenLanguage: e.target.value }
+                    }))}
+                  >
+                    <option value="es">Español (España)</option>
+                    <option value="es-419">Español (Latinoamérica)</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
               </div>
 
               <div className="settings-actions">
-                <button onClick={probarTelegram} disabled={telegramStatus.cargando}>
-                  {telegramStatus.cargando ? 'Probando...' : 'Probar'}
-                </button>
-                <button onClick={guardarTelegram} className="primary">Guardar</button>
+                <button onClick={guardarDeepgram} className="primary">Guardar Configuracion de Voz</button>
               </div>
-
-              {telegramStatus.bot && (
-                <div className="status-info success">
-                  Bot: @{telegramStatus.bot.username} ({telegramStatus.bot.nombre})
-                </div>
-              )}
-              {telegramStatus.error && (
-                <div className="status-info error">{telegramStatus.error}</div>
-              )}
             </div>
 
+            {/* Configuración de IA */}
             <div className="settings-card">
-              <h3>Modelos de Lenguaje (LLM)</h3>
+              <h3>Configuracion de IA</h3>
+              <p className="form-hint">Selecciona el modelo de lenguaje para el agente conversacional</p>
 
               <div className="form-group">
-                <label>Proveedor Activo</label>
+                <label>Proveedor de IA</label>
                 <select
                   value={settingsData.llmConfig?.provider || 'gemini'}
                   onChange={(e) => setSettingsData(prev => ({
@@ -1617,67 +1667,13 @@ function App() {
                 >
                   <option value="gemini">Google Gemini</option>
                   <option value="anthropic">Anthropic Claude</option>
-                  <option value="openai">OpenAI GPT</option>
-                  <option value="groq">Groq (Llama)</option>
+                  <option value="openai">OpenAI GPT-4</option>
+                  <option value="groq">Groq (Llama - Rápido)</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label>API Key - Claude (Anthropic)</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.llmClaude ? 'text' : 'password'}
-                    value={settingsData.apiKeys?.llmClaude || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      apiKeys: { ...prev.apiKeys, llmClaude: e.target.value }
-                    }))}
-                    placeholder="sk-ant-..."
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, llmClaude: !prev.llmClaude }))}>
-                    {showToken.llmClaude ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>API Key - Gemini (Google)</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.llmGemini ? 'text' : 'password'}
-                    value={settingsData.apiKeys?.llmGemini || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      apiKeys: { ...prev.apiKeys, llmGemini: e.target.value }
-                    }))}
-                    placeholder="AIza..."
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, llmGemini: !prev.llmGemini }))}>
-                    {showToken.llmGemini ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>API Key - OpenAI (Opcional)</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.llm ? 'text' : 'password'}
-                    value={settingsData.apiKeys?.llm || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      apiKeys: { ...prev.apiKeys, llm: e.target.value }
-                    }))}
-                    placeholder="sk-..."
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, llm: !prev.llm }))}>
-                    {showToken.llm ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Temperatura ({settingsData.llmConfig?.temperature || 0.7})</label>
+                <label>Creatividad: {settingsData.llmConfig?.temperature || 0.7} ({settingsData.llmConfig?.temperature < 0.3 ? 'Preciso' : settingsData.llmConfig?.temperature > 0.7 ? 'Creativo' : 'Balanceado'})</label>
                 <input
                   type="range"
                   min="0"
@@ -1692,162 +1688,7 @@ function App() {
               </div>
 
               <div className="settings-actions">
-                <button onClick={guardarApiKeys} className="primary">Guardar LLM</button>
-              </div>
-            </div>
-
-            <div className="settings-card">
-              <h3>Deepgram (Voz STT/TTS)</h3>
-
-              <div className="form-group">
-                <label>API Key Deepgram</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.deepgram ? 'text' : 'password'}
-                    value={settingsData.deepgram?.apiKey || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      deepgram: { ...prev.deepgram, apiKey: e.target.value }
-                    }))}
-                    placeholder="API Key de Deepgram"
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, deepgram: !prev.deepgram }))}>
-                    {showToken.deepgram ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group-row">
-                <div className="form-group">
-                  <label>Modelo STT (Escuchar)</label>
-                  <select
-                    value={settingsData.deepgram?.listenModel || 'nova-3'}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      deepgram: { ...prev.deepgram, listenModel: e.target.value }
-                    }))}
-                  >
-                    <option value="nova-3">Nova 3 (Recomendado)</option>
-                    <option value="nova-2">Nova 2</option>
-                    <option value="enhanced">Enhanced</option>
-                    <option value="base">Base</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Idioma</label>
-                  <select
-                    value={settingsData.deepgram?.listenLanguage || 'es'}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      deepgram: { ...prev.deepgram, listenLanguage: e.target.value }
-                    }))}
-                  >
-                    <option value="es">Español</option>
-                    <option value="es-419">Español Latinoamerica</option>
-                    <option value="en">English</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Voz TTS (Hablar)</label>
-                <select
-                  value={settingsData.deepgram?.speakModel || 'aura-2-selena-es'}
-                  onChange={(e) => setSettingsData(prev => ({
-                    ...prev,
-                    deepgram: { ...prev.deepgram, speakModel: e.target.value }
-                  }))}
-                >
-                  <option value="aura-2-selena-es">Selena (Femenina, Recomendada)</option>
-                  <option value="aura-2-luna-es">Luna (Femenina)</option>
-                  <option value="aura-2-estrella-es">Estrella (Femenina)</option>
-                  <option value="aura-2-diana-es">Diana (Femenina)</option>
-                  <option value="aura-2-carina-es">Carina (Femenina)</option>
-                  <option value="aura-2-aquila-es">Aquila (Femenina)</option>
-                  <option value="aura-2-javier-es">Javier (Masculina)</option>
-                </select>
-              </div>
-
-              <div className="form-group-row">
-                <div className="form-group">
-                  <label>Encoding Audio</label>
-                  <select
-                    value={settingsData.deepgram?.audioEncoding || 'linear16'}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      deepgram: { ...prev.deepgram, audioEncoding: e.target.value }
-                    }))}
-                  >
-                    <option value="linear16">Linear16</option>
-                    <option value="mulaw">Mulaw</option>
-                    <option value="alaw">Alaw</option>
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>Sample Rate</label>
-                  <select
-                    value={settingsData.deepgram?.audioSampleRate || 24000}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      deepgram: { ...prev.deepgram, audioSampleRate: parseInt(e.target.value) }
-                    }))}
-                  >
-                    <option value="8000">8000 Hz</option>
-                    <option value="16000">16000 Hz</option>
-                    <option value="24000">24000 Hz (Recomendado)</option>
-                    <option value="48000">48000 Hz</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="settings-actions">
-                <button onClick={guardarDeepgram} className="primary">Guardar Deepgram</button>
-              </div>
-            </div>
-
-            <div className="settings-card">
-              <h3>Otros Servicios</h3>
-
-              <div className="form-group">
-                <label>Vision (Documentos/OCR)</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.vision ? 'text' : 'password'}
-                    value={settingsData.apiKeys?.vision || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      apiKeys: { ...prev.apiKeys, vision: e.target.value }
-                    }))}
-                    placeholder="API Key para analisis de imagenes"
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, vision: !prev.vision }))}>
-                    {showToken.vision ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Browser (Navegacion Automatizada)</label>
-                <div className="input-with-toggle">
-                  <input
-                    type={showToken.browser ? 'text' : 'password'}
-                    value={settingsData.apiKeys?.browser || ''}
-                    onChange={(e) => setSettingsData(prev => ({
-                      ...prev,
-                      apiKeys: { ...prev.apiKeys, browser: e.target.value }
-                    }))}
-                    placeholder="API Key para Browserless.io u otro"
-                  />
-                  <button type="button" className="toggle-btn" onClick={() => setShowToken(prev => ({ ...prev, browser: !prev.browser }))}>
-                    {showToken.browser ? 'Ocultar' : 'Mostrar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="settings-actions">
-                <button onClick={guardarApiKeys} className="primary">Guardar</button>
+                <button onClick={guardarApiKeys} className="primary">Guardar Configuracion de IA</button>
               </div>
             </div>
 
