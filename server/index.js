@@ -438,26 +438,46 @@ app.post('/api/db/recargar', (req, res) => {
 let twilioVoice, whatsapp, telegram, aiAgent, documentValidator;
 
 async function initChannels() {
+  // Primero cargar el agente IA (necesario para todos los canales)
+  try {
+    aiAgent = await import('./ai-agent.js');
+    console.log('✓ Agente IA cargado');
+  } catch (e) {
+    console.log('❌ Error cargando Agente IA:', e.message);
+  }
+
+  try {
+    documentValidator = await import('./documents/validator.js');
+    console.log('✓ Validador de documentos cargado');
+  } catch (e) {
+    console.log('⚠ Validador de documentos no disponible:', e.message);
+  }
+
+  // Cargar Twilio Voice
   try {
     twilioVoice = await import('./channels/twilio-voice.js');
-    twilioVoice.default.initTwilio();
-  } catch (e) { console.log('Twilio Voice no disponible:', e.message); }
+    const initialized = twilioVoice.default.initTwilio();
+    if (initialized) {
+      console.log('✓ Twilio Voice listo');
+    }
+  } catch (e) { console.log('⚠ Twilio Voice no disponible:', e.message); }
 
+  // Cargar WhatsApp
   try {
     whatsapp = await import('./channels/whatsapp.js');
     whatsapp.default.initWhatsApp();
-  } catch (e) { console.log('WhatsApp no disponible:', e.message); }
+  } catch (e) { console.log('⚠ WhatsApp no disponible:', e.message); }
 
+  // Cargar Telegram
   try {
-    aiAgent = await import('./ai-agent.js');
-    documentValidator = await import('./documents/validator.js');
-
     telegram = await import('./channels/telegram.js');
-    telegram.default.initTelegram(
-      aiAgent.default.procesarConIA,
-      documentValidator.default.validarDocumento
-    );
-  } catch (e) { console.log('Telegram no disponible:', e.message); }
+    if (aiAgent && documentValidator) {
+      telegram.default.initTelegram(
+        aiAgent.default.procesarConIA,
+        documentValidator.default.validarDocumento
+      );
+    }
+  } catch (e) { console.log('⚠ Telegram no disponible:', e.message); }
 }
 
 // Inicializar canales al arrancar
@@ -467,13 +487,53 @@ initChannels();
 
 // Webhook: Llamada entrante
 app.post('/api/twilio/voice', (req, res) => {
-  if (!twilioVoice) return res.status(503).send('Twilio no configurado');
+  console.log('📞 Llamada entrante recibida');
+  if (!twilioVoice) {
+    console.log('❌ Twilio Voice no está configurado');
+    return res.status(503).send('Twilio no configurado');
+  }
+  twilioVoice.default.handleIncomingCall(req, res);
+});
+
+// También aceptar GET para verificar que el endpoint funciona
+app.get('/api/twilio/voice', (req, res) => {
+  res.json({
+    status: 'ok',
+    twilioConfigured: !!twilioVoice,
+    aiAgentConfigured: !!aiAgent,
+    message: 'Endpoint de voz activo. Usa POST para llamadas de Twilio.'
+  });
+});
+
+// Alias para compatibilidad (el usuario puede haber configurado este en Twilio)
+app.post('/api/voice/incoming', (req, res) => {
+  console.log('📞 Llamada entrante recibida (alias /api/voice/incoming)');
+  if (!twilioVoice) {
+    console.log('❌ Twilio Voice no está configurado');
+    return res.status(503).send('Twilio no configurado');
+  }
   twilioVoice.default.handleIncomingCall(req, res);
 });
 
 // Webhook: Procesar voz del usuario
 app.post('/api/twilio/procesar-voz', async (req, res) => {
-  if (!twilioVoice || !aiAgent) return res.status(503).send('No configurado');
+  console.log('🎤 Procesando voz del usuario:', req.body.SpeechResult);
+  if (!twilioVoice) {
+    console.log('❌ Twilio Voice no configurado');
+    return res.status(503).send('Twilio no configurado');
+  }
+  if (!aiAgent) {
+    console.log('❌ Agente IA no configurado');
+    // Responder con TwiML de error en lugar de error HTTP
+    const twilio = await import('twilio');
+    const VoiceResponse = twilio.default.twiml.VoiceResponse;
+    const response = new VoiceResponse();
+    response.say({ voice: 'Polly.Mia', language: 'es-MX' },
+      'Lo siento, el sistema de inteligencia artificial no está disponible en este momento. Por favor intenta más tarde.');
+    response.hangup();
+    res.type('text/xml');
+    return res.send(response.toString());
+  }
   await twilioVoice.default.handleVoiceInput(req, res, aiAgent.default.procesarConIA);
 });
 
