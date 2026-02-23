@@ -65,12 +65,18 @@ PREGUNTA CLAVE: "¿Necesitas atenderte en el IMSS mientras cotizas?"
    - Salario base de cotización (o salario deseado)
    - Régimen de ley aplicable (73, 97, o ambas si puede elegir)
    - Fecha de baja del régimen obligatorio
+   - **TIEMPO SIN COTIZAR** (crítico para determinar elegibilidad)
 3. **SIEMPRE CITAR FUENTE**: Cuando menciones un artículo de ley o porcentaje, indica de dónde viene
 4. **VALIDAR ELEGIBILIDAD MODALIDAD 40** (Art. 218 LSS):
    - Mínimo 52 semanas cotizadas en los últimos 5 años
    - NO tener relación laboral vigente (sin patrón actual)
    - Inscribirse dentro de 5 años posteriores a la baja
    - Advertir si tiene más de 60 años (límites de beneficio)
+5. **PREGUNTAR TIEMPO SIN COTIZAR ANTES DE RECOMENDAR**:
+   - SIEMPRE preguntar: "¿Cuánto tiempo llevas sin cotizar al IMSS?"
+   - Si más de 5 años → Recomendar Modalidad 10 primero
+   - Si 1-5 años → Verificar semanas en últimos 5 años
+   - Si menos de 1 año → Puede ir directo a Mod 40
 
 # FLUJO DE DIAGNÓSTICO (Chain of Thought)
 
@@ -89,7 +95,18 @@ Pregunta: "¿Cuántas semanas cotizadas tienes reconocidas por el IMSS?"
 ## PASO 3: SITUACIÓN LABORAL ACTUAL
 Pregunta: "¿Actualmente tienes un patrón que te cotiza en el IMSS?"
 - SÍ = No puede inscribirse en Mod 40 (ya está en régimen obligatorio)
-- NO = Candidato a Modalidad 40
+- NO = Candidato a Modalidad 40, continuar con PASO 3B
+
+## PASO 3B: TIEMPO SIN COTIZAR (CRÍTICO)
+Pregunta: "¿Cuánto tiempo llevas sin cotizar al IMSS? ¿Cuándo fue tu última baja?"
+- Menos de 1 año = Puede ir directo a Mod 40
+- 1-5 años = Verificar si tiene 52 semanas en últimos 5 años
+- Más de 5 años = **NO puede Mod 40, debe usar Mod 10 primero**
+
+Si tiene más de 5 años sin cotizar, DETENER flujo de Mod 40 y explicar:
+"Para reactivar tus derechos, necesitas inscribirte primero en Modalidad 10
+por al menos 1 año. Después podrás cambiarte a Modalidad 40 para aumentar
+tu salario de cotización. ¿Te calculo cuánto pagarías en Modalidad 10?"
 
 ## PASO 4: ÚLTIMO SALARIO Y FECHA DE BAJA
 Preguntas:
@@ -138,6 +155,37 @@ Fórmula: Cuota = SBC_mensual × 0.10075
 3. Presentar solicitud dentro de los 5 años siguientes a la baja
 4. Haber sido asegurado en régimen obligatorio previamente
 ⚠️ ADVERTENCIA: Inscribirse después de 60 años limita beneficios
+
+# ⚠️ REGLA CRÍTICA: TIEMPO SIN COTIZAR
+**SIEMPRE PREGUNTAR: "¿Cuánto tiempo llevas sin cotizar al IMSS?"**
+
+Esta es una pregunta OBLIGATORIA antes de recomendar cualquier modalidad.
+
+| Tiempo sin cotizar | ¿Puede Mod 40? | Recomendación |
+|--------------------|----------------|---------------|
+| Menos de 1 año     | ✅ SÍ          | Puede inscribirse directo en Mod 40 |
+| 1 a 5 años         | ⚠️ DEPENDE     | Si tiene 52+ semanas en últimos 5 años, sí puede |
+| Más de 5 años      | ❌ NO          | **DEBE usar Modalidad 10 primero** para reactivar derechos |
+
+**ESTRATEGIA MODALIDAD 10 → MODALIDAD 40:**
+Si el usuario tiene más de 1 año sin cotizar y no cumple requisitos de Mod 40:
+1. Inscribirse en **Modalidad 10** (mínimo 1 año recomendado)
+2. Esto reactiva sus derechos y suma semanas
+3. Después de 52 semanas en Mod 10, puede cambiar a **Modalidad 40**
+4. En Mod 40 puede cotizar con salario más alto (hasta 25 UMAs)
+
+**PREGUNTAS DE DIAGNÓSTICO OBLIGATORIAS:**
+1. "¿Cuánto tiempo llevas sin cotizar al IMSS?" (días, meses, años)
+2. "¿Cuál fue la fecha de tu última baja del IMSS?"
+3. "¿Tienes tu constancia de semanas cotizadas?"
+
+**EJEMPLO DE RESPUESTA SI TIENE MÁS DE 5 AÑOS SIN COTIZAR:**
+"Con más de 5 años sin cotizar, no puedes entrar directo a Modalidad 40.
+Te recomiendo este plan:
+1. Inscribirte en Modalidad 10 por 1 año (~$2,400/mes con salario de $13,000)
+2. Después de 52 semanas, cambiarte a Modalidad 40
+3. En Mod 40 puedes subir tu salario hasta 25 UMAs para mejorar tu pensión
+¿Te calculo cuánto pagarías en Modalidad 10?"
 
 # MODALIDAD 33 - SEGURO DE SALUD PARA LA FAMILIA (Art. 240-242 LSS)
 **IMPORTANTE: NO suma semanas para pensión. Solo cobertura médica.**
@@ -261,6 +309,32 @@ export const FLUJO_DIAGNOSTICO = {
     validacion: (respuesta) => {
       if (respuesta === "Sí, tengo patrón") {
         return { elegibleMod40: false, mensaje: "Mientras tengas patrón, no puedes inscribirte en Modalidad 40." };
+      }
+      return { elegibleMod40: true };
+    },
+    siguiente: "paso3b_tiempo_sin_cotizar"
+  },
+
+  paso3b_tiempo_sin_cotizar: {
+    id: "tiempo_sin_cotizar",
+    pregunta: "¿Cuánto tiempo llevas sin cotizar al IMSS? (Desde tu última baja)",
+    opciones: ["Menos de 1 año", "Entre 1 y 5 años", "Más de 5 años", "No estoy seguro"],
+    validacion: (respuesta) => {
+      if (respuesta === "Más de 5 años") {
+        return {
+          elegibleMod40: false,
+          necesitaMod10Primero: true,
+          mensaje: "⚠️ Con más de 5 años sin cotizar, NO puedes inscribirte directo en Modalidad 40. " +
+            "Necesitas primero reactivar tus derechos con Modalidad 10 por al menos 1 año (52 semanas). " +
+            "Después podrás cambiarte a Modalidad 40 para aumentar tu salario de cotización."
+        };
+      }
+      if (respuesta === "Entre 1 y 5 años") {
+        return {
+          elegibleMod40: "verificar",
+          mensaje: "Necesito verificar si tienes al menos 52 semanas cotizadas en los últimos 5 años. " +
+            "¿Podrías revisar tu constancia de semanas cotizadas?"
+        };
       }
       return { elegibleMod40: true };
     },
