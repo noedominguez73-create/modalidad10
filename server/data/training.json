@@ -20,6 +20,20 @@
       "contenido": "Si el usuario ya dijo que NUNCA ha trabajado o cotizado, NO insistir pidiendo año o semanas. Ir directo a las opciones disponibles para su caso.",
       "activo": true,
       "prioridad": 2
+    },
+    {
+      "id": 4,
+      "titulo": "CUANDO USUARIO DICE UN AÑO - TIENE HISTORIAL",
+      "contenido": "REGLA CRÍTICA: Cuando el usuario menciona un año (1990, 1985, 2000, etc.), eso significa que SÍ TIENE HISTORIAL DE COTIZACIONES. NUNCA preguntar de nuevo si ha cotizado. Confirmar el año y determinar la ley aplicable: antes de julio 1997 = Ley 73, después = Ley 97. Luego preguntar cuántas semanas tiene.",
+      "activo": true,
+      "prioridad": 0
+    },
+    {
+      "id": 5,
+      "titulo": "No repetir preguntas ya respondidas",
+      "contenido": "Si el usuario ya respondió una pregunta (como el año en que empezó a cotizar), NO volver a preguntar lo mismo. Avanzar al siguiente paso del flujo de diagnóstico.",
+      "activo": true,
+      "prioridad": 0
     }
   ],
   "faq": [
@@ -85,16 +99,31 @@
     },
     {
       "id": 2,
-      "contexto": "Usuario extranjero o que nunca ha cotizado",
-      "usuarioDice": "nunca he trabajado, soy ciudadano colombiano pero con permiso de trabajo en mexico",
-      "agenteResponde": "Entiendo. Como no tienes historial de cotizaciones en el IMSS, la Modalidad 40 no está disponible para ti (requiere cotizaciones previas). Pero tienes estas opciones:\n\n1) **Modalidad 10**: Si vas a trabajar de forma independiente (freelance, negocio propio), puedes inscribirte voluntariamente. Incluye servicio médico completo + acumulas semanas para pensión. Costo aproximado: $2,400/mes.\n\n2) **Trabajadoras del Hogar**: Si trabajarás en un hogar (limpieza, cuidado de personas, jardinería, chofer), tu patrón debe inscribirte obligatoriamente desde 2022.\n\n3) **Empleo formal**: Si consigues trabajo con una empresa, ellos deben inscribirte al IMSS.\n\n¿Cuál es tu situación laboral actual o planeada?",
-      "activo": true
+      "contexto": "Usuario que EXPLÍCITAMENTE dice NUNCA ha cotizado",
+      "usuarioDice": "nunca he trabajado formalmente",
+      "agenteResponde": "Entiendo que no tienes historial de cotizaciones en el IMSS. La Modalidad 40 no está disponible (requiere cotizaciones previas). Tus opciones son:\n\n1) **Modalidad 10**: Para trabajadores independientes. Incluye servicio médico + acumula semanas. Costo: ~$2,400/mes.\n\n2) **Trabajadoras del Hogar**: Si trabajas en un hogar, tu patrón debe inscribirte.\n\n3) **Empleo formal**: Si consigues trabajo, el patrón te inscribe.\n\n¿Cuál es tu situación laboral?",
+      "activo": true,
+      "nota": "SOLO usar esta respuesta cuando el usuario dice NUNCA, NO, JAMÁS. Si menciona un AÑO, tiene historial."
     },
     {
       "id": 3,
-      "contexto": "Usuario pregunta cómo cotizar sin contexto",
-      "usuarioDice": "como puedo cotizar en el imss",
-      "agenteResponde": "Para orientarte correctamente, necesito saber tu situación. ¿Alguna vez has cotizado al IMSS en México? Es decir, ¿has tenido algún trabajo formal donde te dieron de alta?",
+      "contexto": "Usuario que SÍ tiene historial - menciona año",
+      "usuarioDice": "en 1990",
+      "agenteResponde": "Perfecto, empezaste a cotizar en 1990. Como fue antes de julio 1997, estás bajo la **Ley 73**, que ofrece pensiones vitalicias calculadas con tu salario promedio de los últimos 5 años. Ahora necesito saber: ¿Cuántas semanas cotizadas tienes actualmente? (Puedes verlo en IMSS Digital o llamando al 800-623-2323)",
+      "activo": true
+    },
+    {
+      "id": 5,
+      "contexto": "Usuario repite que empezó en un año",
+      "usuarioDice": "ya te dije, empecé en 1990",
+      "agenteResponde": "Tienes razón, disculpa la confusión. Empezaste a cotizar en 1990, eso te ubica en la Ley 73. Para continuar con tu asesoría: ¿Cuántas semanas cotizadas tienes reconocidas por el IMSS?",
+      "activo": true
+    },
+    {
+      "id": 6,
+      "contexto": "Usuario quiere reactivar seguro - tiene historial",
+      "usuarioDice": "como reactivo mi seguro social",
+      "agenteResponde": "Para ayudarte a reactivar tu seguro social, necesito saber tu situación. ¿En qué año aproximadamente fue tu último trabajo formal donde cotizaste al IMSS? (O dime si nunca has cotizado)",
       "activo": true
     },
     {
