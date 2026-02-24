@@ -11,7 +11,7 @@ import feedback from './feedback.js';
 import settings from './settings.js';
 import crm from './crm/index.js';
 import training from './training.js';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -1516,6 +1516,31 @@ app.get('/api/status', (req, res) => {
     } : null,
     crm: crmStats
   });
+});
+
+// Endpoint para ver los logs de voz (DIAGNÓSTICO)
+app.get('/api/debug/voice-logs', (req, res) => {
+  try {
+    const logPath = join(__dirname, 'data', 'voice-debug.json');
+    if (!existsSync(logPath)) {
+      return res.json({ message: 'No hay logs aún o el archivo no existe.', path: logPath });
+    }
+    const logs = JSON.parse(readFileSync(logPath, 'utf8'));
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Limpiar logs
+app.post('/api/debug/voice-logs/clear', (req, res) => {
+  try {
+    const logPath = join(__dirname, 'data', 'voice-debug.json');
+    writeFileSync(logPath, JSON.stringify([], null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Fallback SPA - servir index.html para cualquier ruta no-API

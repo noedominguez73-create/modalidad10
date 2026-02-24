@@ -5,7 +5,7 @@
 
 import twilio from 'twilio';
 import settings from '../settings.js';
-import { appendFileSync, existsSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
