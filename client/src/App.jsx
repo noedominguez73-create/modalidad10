@@ -151,8 +151,16 @@ function App() {
     try {
       const res = await fetch('/api/training')
       const data = await res.json()
-      if (data.success) {
-        setTrainingData(data.data)
+      if (data.success && data.data) {
+        // Merge defensivo para evitar propiedades undefined
+        setTrainingData(prev => ({
+          reglas: data.data.reglas || prev.reglas || [],
+          faq: data.data.faq || prev.faq || [],
+          conocimiento: data.data.conocimiento || prev.conocimiento || [],
+          ejemplos: data.data.ejemplos || prev.ejemplos || [],
+          prohibido: data.data.prohibido || prev.prohibido || [],
+          configuracion: data.data.configuracion || prev.configuracion || {}
+        }))
       }
     } catch (err) {
       console.error('Error cargando training:', err)
@@ -240,7 +248,14 @@ function App() {
     try {
       const res = await fetch('/api/settings')
       const data = await res.json()
-      setSettingsData(data)
+      // Merge defensivo para evitar propiedades undefined
+      setSettingsData(prev => ({
+        servicios: data.servicios || prev.servicios || {},
+        voz: data.voz || prev.voz || {},
+        llm: data.llm || prev.llm || {},
+        numeros: data.numeros || prev.numeros || [],
+        imss: data.imss || prev.imss || {}
+      }))
       setServiciosStatus(data.servicios || {})
     } catch (err) {
       console.error('Error cargando settings:', err)
@@ -1865,7 +1880,7 @@ function App() {
                 <p>El agente SIEMPRE seguira estas reglas al responder.</p>
 
                 <div className="training-list">
-                  {trainingData.reglas.map(regla => (
+                  {(trainingData.reglas || []).map(regla => (
                     <div key={regla.id} className={`training-item ${regla.activo ? 'activo' : 'inactivo'}`}>
                       <div className="item-header">
                         <strong>{regla.titulo}</strong>
@@ -1942,7 +1957,7 @@ function App() {
                 <p>Respuestas predefinidas que el agente usara cuando detecte estas preguntas.</p>
 
                 <div className="training-list">
-                  {trainingData.faq.map(faq => (
+                  {(trainingData.faq || []).map(faq => (
                     <div key={faq.id} className={`training-item ${faq.activo ? 'activo' : 'inactivo'}`}>
                       <div className="item-header">
                         <strong>P: {faq.pregunta}</strong>
@@ -2019,7 +2034,7 @@ function App() {
                 <p>Informacion adicional que el agente puede usar para responder.</p>
 
                 <div className="training-list">
-                  {trainingData.conocimiento.map(item => (
+                  {(trainingData.conocimiento || []).map(item => (
                     <div key={item.id} className={`training-item ${item.activo ? 'activo' : 'inactivo'}`}>
                       <div className="item-header">
                         <strong>[{item.categoria}] {item.titulo}</strong>
@@ -2104,7 +2119,7 @@ function App() {
                 <p>Ensenale al agente como responder en situaciones especificas.</p>
 
                 <div className="training-list">
-                  {trainingData.ejemplos.map(ej => (
+                  {(trainingData.ejemplos || []).map(ej => (
                     <div key={ej.id} className={`training-item ejemplo ${ej.activo ? 'activo' : 'inactivo'}`}>
                       <div className="item-header">
                         <strong>Contexto: {ej.contexto}</strong>
