@@ -473,10 +473,13 @@ async function initChannels() {
     whatsapp.default.initWhatsApp();
   } catch (e) { console.log('⚠ WhatsApp no disponible:', e.message); }
 
-  // Cargar Telegram
+  // Cargar Telegram (con delay para evitar conflicto con instancia anterior)
   try {
     telegram = await import('./channels/telegram.js');
     if (aiAgent && documentValidator) {
+      // Esperar 3 segundos para que la instancia anterior cierre
+      console.log('⏳ Esperando para iniciar Telegram...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
       telegram.default.initTelegram(
         aiAgent.default.procesarConIA,
         documentValidator.default.validarDocumento
