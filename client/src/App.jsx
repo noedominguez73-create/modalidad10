@@ -153,13 +153,14 @@ function App() {
       const data = await res.json()
       if (data.success && data.data) {
         // Merge defensivo para evitar propiedades undefined
+        const d = data.data || {}
         setTrainingData(prev => ({
-          reglas: data.data.reglas || prev.reglas || [],
-          faq: data.data.faq || prev.faq || [],
-          conocimiento: data.data.conocimiento || prev.conocimiento || [],
-          ejemplos: data.data.ejemplos || prev.ejemplos || [],
-          prohibido: data.data.prohibido || prev.prohibido || [],
-          configuracion: data.data.configuracion || prev.configuracion || {}
+          reglas: d.reglas || prev.reglas || [],
+          faq: d.faq || prev.faq || [],
+          conocimiento: d.conocimiento || prev.conocimiento || [],
+          ejemplos: d.ejemplos || prev.ejemplos || [],
+          prohibido: d.prohibido || prev.prohibido || [],
+          configuracion: d.configuracion || prev.configuracion || {}
         }))
       }
     } catch (err) {
