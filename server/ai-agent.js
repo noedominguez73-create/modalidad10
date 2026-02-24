@@ -279,15 +279,28 @@ Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al
         nuevoPaso = parsed.nuevoPaso;
         // Limpiar JSON de la respuesta visible
         respuesta = respuesta.replace(jsonMatch[0], '').trim();
-      } catch (e) {}
+      } catch (e) {
+        console.log('⚠️ Error parseando JSON de LLM:', e.message);
+      }
+    }
+
+    // FALLBACK: Extraer salario directamente del mensaje del usuario
+    const salarioExtraido = extraerSalarioDelMensaje(mensaje);
+    if (salarioExtraido && !nuevosDatos?.salarioMensual) {
+      nuevosDatos = nuevosDatos || {};
+      nuevosDatos.salarioMensual = salarioExtraido;
+      console.log(`💰 Salario extraído del mensaje: $${salarioExtraido}`);
     }
 
     // Detectar modalidad y realizar cálculos
     const datosCalculo = { ...datosUsuario, ...nuevosDatos };
     const modalidadDetectada = detectarModalidad(mensaje, datosCalculo);
 
+    // Si tenemos salario pero no modalidad, asumir Mod 10 (el caso más común para independientes)
+    const modalidadFinal = modalidadDetectada || (salarioExtraido ? 'mod10' : null);
+
     // Cálculos para Modalidad 40
-    if (modalidadDetectada === 'mod40' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod40')) {
+    if (modalidadFinal === 'mod40' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod40')) {
       try {
         const resultado = calcularModalidad40(datosCalculo);
         respuesta += formatearResultadoCalculo(resultado, canal, 'mod40');
@@ -303,7 +316,7 @@ Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al
     }
 
     // Cálculos para Modalidad 10
-    if (modalidadDetectada === 'mod10' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod10')) {
+    if (modalidadFinal === 'mod10' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod10')) {
       try {
         const resultado = calcularModalidad10(datosCalculo);
         respuesta += formatearResultadoCalculo(resultado, canal, 'mod10');
@@ -314,7 +327,7 @@ Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al
     }
 
     // Cálculos para Modalidad 33
-    if (modalidadDetectada === 'mod33' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod33')) {
+    if (modalidadFinal === 'mod33' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod33')) {
       try {
         const resultado = calcularModalidad33(datosCalculo);
         respuesta += formatearResultadoCalculo(resultado, canal, 'mod33');
@@ -328,7 +341,7 @@ Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al
       mensaje: respuesta,
       nuevosDatos,
       nuevoPaso,
-      modalidadDetectada,
+      modalidadDetectada: modalidadFinal,
       finConversacion: nuevoPaso === 'completado'
     };
 
@@ -350,7 +363,8 @@ function tieneLosDatosParaCalcular(datosActuales, datosNuevos, tipo) {
   }
 
   if (tipo === 'mod10') {
-    return datos.salarioMensual && datos.claseRiesgo;
+    // Solo necesita salarioMensual - claseRiesgo tiene default 'I'
+    return datos.salarioMensual || datos.ingresoMensual;
   }
 
   if (tipo === 'mod33') {
@@ -381,6 +395,60 @@ function detectarModalidad(mensaje, datosUsuario) {
       msgLower.includes('pensión') || msgLower.includes('modalidad 40') ||
       msgLower.includes('mod 40') || msgLower.includes('jubilación')) {
     return 'mod40';
+  }
+
+  return null;
+}
+
+// Extraer salario del mensaje del usuario
+function extraerSalarioDelMensaje(mensaje) {
+  const msgLower = mensaje.toLowerCase().trim();
+
+  // Mapeo de palabras numéricas en español
+  const palabrasANumeros = {
+    'mil': 1000,
+    'un mil': 1000,
+    'dos mil': 2000,
+    'tres mil': 3000,
+    'cuatro mil': 4000,
+    'cinco mil': 5000,
+    'seis mil': 6000,
+    'siete mil': 7000,
+    'ocho mil': 8000,
+    'nueve mil': 9000,
+    'diez mil': 10000,
+    'once mil': 11000,
+    'doce mil': 12000,
+    'trece mil': 13000,
+    'catorce mil': 14000,
+    'quince mil': 15000,
+    'dieciseis mil': 16000,
+    'diecisiete mil': 17000,
+    'dieciocho mil': 18000,
+    'diecinueve mil': 19000,
+    'veinte mil': 20000,
+    'veinticinco mil': 25000,
+    'treinta mil': 30000,
+    'cuarenta mil': 40000,
+    'cincuenta mil': 50000
+  };
+
+  // Buscar patrones de palabras numéricas
+  for (const [palabra, valor] of Object.entries(palabrasANumeros)) {
+    if (msgLower.includes(palabra)) {
+      console.log(`💰 Salario detectado por palabras: ${valor} (de "${palabra}")`);
+      return valor;
+    }
+  }
+
+  // Buscar números directamente (ej: "20000", "20,000", "20 000", "$20000")
+  const numeroMatch = mensaje.replace(/[$,\s]/g, '').match(/(\d+)/);
+  if (numeroMatch) {
+    const numero = parseInt(numeroMatch[1], 10);
+    if (numero >= 1000 && numero <= 200000) {
+      console.log(`💰 Salario detectado por número: ${numero}`);
+      return numero;
+    }
   }
 
   return null;
