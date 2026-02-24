@@ -22,12 +22,49 @@ export function initTelegram(procesarConIA, validarDocumento) {
     return false;
   }
 
-  // Si ya hay un bot corriendo, detenerlo primero
-  if (bot) {
-    bot.stopPolling();
+  // Validar formato del token (debe ser: números:cadena)
+  const tokenRegex = /^\d+:[A-Za-z0-9_-]+$/;
+  if (!tokenRegex.test(config.botToken)) {
+    console.log('⚠ Telegram Bot: Token inválido (formato incorrecto)');
+    return false;
   }
 
-  bot = new TelegramBot(config.botToken, { polling: true });
+  // Si ya hay un bot corriendo, detenerlo primero
+  if (bot) {
+    try {
+      bot.stopPolling();
+    } catch (e) {
+      // Ignorar errores al detener
+    }
+    bot = null;
+  }
+
+  try {
+    bot = new TelegramBot(config.botToken, {
+      polling: {
+        autoStart: true,
+        params: {
+          timeout: 10
+        }
+      }
+    });
+
+    // Manejar errores de polling sin crashear la app
+    bot.on('polling_error', (error) => {
+      // Solo loggear una vez, no spamear los logs
+      if (error.code === 'ETELEGRAM') {
+        if (error.message.includes('404')) {
+          console.error('❌ Telegram: Token inválido o bot no existe. Deteniendo polling...');
+          bot.stopPolling();
+        } else if (error.message.includes('409')) {
+          console.error('⚠ Telegram: Otra instancia del bot está corriendo');
+        }
+      }
+    });
+
+    bot.on('error', (error) => {
+      console.error('❌ Telegram error:', error.message);
+    });
 
   // Comando /start
   bot.onText(/\/start/, async (msg) => {
@@ -225,8 +262,14 @@ export function initTelegram(procesarConIA, validarDocumento) {
     }
   });
 
-  console.log('✓ Telegram Bot inicializado');
-  return true;
+    console.log('✓ Telegram Bot inicializado');
+    return true;
+
+  } catch (error) {
+    console.error('❌ Error inicializando Telegram:', error.message);
+    bot = null;
+    return false;
+  }
 }
 
 function obtenerSesion(chatId) {
