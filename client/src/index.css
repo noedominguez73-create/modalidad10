@@ -3555,6 +3555,16 @@ input.readonly {
   cursor: not-allowed;
 }
 
+.provider-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+  text-align: center;
+  padding: 8px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 6px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .provider-grid {

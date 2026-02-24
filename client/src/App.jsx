@@ -1556,21 +1556,36 @@ function App() {
               {/* Channel Config */}
               <div className="provider-section">
                 <h4>Configuracion por Canal</h4>
+                <p className="form-hint">Selecciona y guarda el proveedor para cada canal</p>
                 <div className="channel-config">
                   <div className="channel-row">
                     <span className="channel-icon">🌐</span>
-                    <span className="channel-name">Web</span>
+                    <span className="channel-name">Web/Chat</span>
                     <select
                       value={settingsData.llm?.provider || 'gemini'}
-                      onChange={(e) => setSettingsData(prev => ({
-                        ...prev,
-                        llm: { ...prev.llm, provider: e.target.value }
-                      }))}
+                      onChange={async (e) => {
+                        const provider = e.target.value;
+                        setSettingsData(prev => ({
+                          ...prev,
+                          llm: { ...prev.llm, provider }
+                        }));
+                        try {
+                          await fetch('/api/providers/llm/default', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider })
+                          });
+                          setSettingsMsg(`Proveedor cambiado a ${provider.toUpperCase()}`);
+                          setTimeout(() => setSettingsMsg(''), 3000);
+                        } catch (err) {
+                          console.error('Error guardando proveedor:', err);
+                        }
+                      }}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
                       <option value="anthropic">Claude</option>
-                      <option value="groq">Groq</option>
+                      <option value="groq">Groq (Rapido)</option>
                       <option value="openai">OpenAI</option>
                       <option value="glm5">GLM-5</option>
                     </select>
@@ -1580,15 +1595,29 @@ function App() {
                     <span className="channel-name">WhatsApp</span>
                     <select
                       value={settingsData.llm?.provider || 'gemini'}
-                      onChange={(e) => setSettingsData(prev => ({
-                        ...prev,
-                        llm: { ...prev.llm, provider: e.target.value }
-                      }))}
+                      onChange={async (e) => {
+                        const provider = e.target.value;
+                        setSettingsData(prev => ({
+                          ...prev,
+                          llm: { ...prev.llm, provider }
+                        }));
+                        try {
+                          await fetch('/api/providers/llm/channel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ channel: 'whatsapp', provider })
+                          });
+                          setSettingsMsg(`WhatsApp cambiado a ${provider.toUpperCase()}`);
+                          setTimeout(() => setSettingsMsg(''), 3000);
+                        } catch (err) {
+                          console.error('Error guardando proveedor:', err);
+                        }
+                      }}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
                       <option value="anthropic">Claude</option>
-                      <option value="groq">Groq</option>
+                      <option value="groq">Groq (Rapido)</option>
                       <option value="openai">OpenAI</option>
                       <option value="glm5">GLM-5</option>
                     </select>
@@ -1598,15 +1627,29 @@ function App() {
                     <span className="channel-name">Telegram</span>
                     <select
                       value={settingsData.llm?.provider || 'gemini'}
-                      onChange={(e) => setSettingsData(prev => ({
-                        ...prev,
-                        llm: { ...prev.llm, provider: e.target.value }
-                      }))}
+                      onChange={async (e) => {
+                        const provider = e.target.value;
+                        setSettingsData(prev => ({
+                          ...prev,
+                          llm: { ...prev.llm, provider }
+                        }));
+                        try {
+                          await fetch('/api/providers/llm/channel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ channel: 'telegram', provider })
+                          });
+                          setSettingsMsg(`Telegram cambiado a ${provider.toUpperCase()}`);
+                          setTimeout(() => setSettingsMsg(''), 3000);
+                        } catch (err) {
+                          console.error('Error guardando proveedor:', err);
+                        }
+                      }}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
                       <option value="anthropic">Claude</option>
-                      <option value="groq">Groq</option>
+                      <option value="groq">Groq (Rapido)</option>
                       <option value="openai">OpenAI</option>
                       <option value="glm5">GLM-5</option>
                     </select>
@@ -1616,19 +1659,51 @@ function App() {
                     <span className="channel-name">Llamadas</span>
                     <select
                       value="groq"
+                      onChange={async (e) => {
+                        const provider = e.target.value;
+                        try {
+                          await fetch('/api/providers/llm/channel', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ channel: 'voice', provider })
+                          });
+                          setSettingsMsg(`Llamadas cambiado a ${provider.toUpperCase()}`);
+                          setTimeout(() => setSettingsMsg(''), 3000);
+                        } catch (err) {
+                          console.error('Error guardando proveedor:', err);
+                        }
+                      }}
                       className="channel-select"
                     >
                       <option value="groq">Groq (Recomendado)</option>
                       <option value="gemini">Gemini</option>
+                      <option value="anthropic">Claude</option>
                     </select>
                     <select
                       value={settingsData.voz?.speakModel?.includes('aura') ? 'deepgram' : 'polly'}
+                      onChange={async (e) => {
+                        const ttsProvider = e.target.value;
+                        try {
+                          await fetch('/api/providers/tts/default', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider: ttsProvider })
+                          });
+                          setSettingsMsg(`TTS cambiado a ${ttsProvider.toUpperCase()}`);
+                          setTimeout(() => setSettingsMsg(''), 3000);
+                        } catch (err) {
+                          console.error('Error guardando TTS:', err);
+                        }
+                      }}
                       className="channel-select"
                     >
                       <option value="deepgram">Deepgram TTS</option>
-                      <option value="polly">Amazon Polly</option>
+                      <option value="amazon-polly">Amazon Polly</option>
                     </select>
                   </div>
+                </div>
+                <div className="provider-hint">
+                  Los cambios se guardan automaticamente al seleccionar
                 </div>
               </div>
             </div>
