@@ -23,6 +23,7 @@ const PORT = process.env.PORT || 3040;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Requerido para webhooks de Twilio
 app.use(express.static('client/dist'));
 
 // Health check para Railway
@@ -1446,7 +1447,7 @@ app.get('/api/status', (req, res) => {
   let feedbackStats = null;
   try {
     feedbackStats = feedback.obtenerEstadisticas();
-  } catch (e) {}
+  } catch (e) { }
 
   let crmStats = null;
   try {
@@ -1455,7 +1456,7 @@ app.get('/api/status', (req, res) => {
       clientes: crm.clientes.obtenerEstadisticasClientes().total,
       pagosPendientes: crm.pagos.obtenerPagosPendientesMatch().length
     };
-  } catch (e) {}
+  } catch (e) { }
 
   res.json({
     status: 'ok',

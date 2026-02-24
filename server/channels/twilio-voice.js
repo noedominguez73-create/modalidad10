@@ -9,6 +9,19 @@ import settings from '../settings.js';
 // Cliente Twilio
 let client = null;
 
+// Almacén de sesiones en memoria (para historial de voz)
+const voiceSessions = new Map();
+
+// Limpiar sesiones antiguas cada 30 minutos para ahorrar memoria
+setInterval(() => {
+  const now = Date.now();
+  for (const [sid, session] of voiceSessions.entries()) {
+    if (now - session.lastSeen > 1800000) { // 30 minutos
+      voiceSessions.delete(sid);
+    }
+  }
+}, 600000); // Revisar cada 10 minutos
+
 // Obtener configuración actual
 function getConfig() {
   return settings.obtenerTwilio();
@@ -40,13 +53,18 @@ export function generarRespuestaVoz(mensaje, opciones = {}) {
   // Mensaje de bienvenida o respuesta
   response.say(sayOptions, mensaje);
 
-  // Si necesita capturar entrada de voz - usar URL RELATIVA (como callcenteria)
+  // Si necesita capturar entrada de voz - usar URL absoluta si está disponible
   if (opciones.esperarRespuesta) {
+    const config = getConfig();
+    const actionUrl = config.webhookBaseUrl
+      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
+      : '/api/twilio/procesar-voz';
+
     response.gather({
       input: 'speech',
       language: 'es-MX',
       speechTimeout: 'auto',
-      action: '/api/twilio/procesar-voz',  // URL relativa - Twilio la convierte automáticamente
+      action: actionUrl,
       method: 'POST'
     });
     // Si no hablan, despedirse
@@ -71,11 +89,23 @@ export function handleIncomingCall(req, res) {
   const { Called, Caller, CallSid } = req.body || {};
   console.log(`📞 [VOICE] Llamada entrante: ${Caller} -> ${Called}, SID: ${CallSid}`);
 
+  // Inicializar sesión de voz con historial vacío
+  voiceSessions.set(CallSid, {
+    historial: [],
+    lastSeen: Date.now(),
+    caller: Caller
+  });
+
   // Generar TwiML directamente (más confiable)
+  const config = getConfig();
+  const actionUrl = config.webhookBaseUrl
+    ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
+    : '/api/twilio/procesar-voz';
+
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="auto" action="/api/twilio/procesar-voz" method="POST">
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
     <Say language="es-MX" voice="Polly.Mia">Te escucho.</Say>
   </Gather>
   <Say language="es-MX" voice="Polly.Mia">No escuché nada. Si necesitas ayuda, vuelve a llamar. Hasta luego.</Say>
@@ -94,12 +124,26 @@ export async function handleVoiceInput(req, res, procesarConIA) {
 
   console.log(`🎤 [VOICE] Usuario dijo: "${speechResult}" (confianza: ${confidence}, SID: ${callSid})`);
 
+  // Recuperar o crear sesión
+  let session = voiceSessions.get(callSid);
+  if (!session) {
+    session = { historial: [], lastSeen: Date.now() };
+    voiceSessions.set(callSid, session);
+  } else {
+    session.lastSeen = Date.now();
+  }
+
   // Si no se entendió nada
   if (!speechResult) {
+    const config = getConfig();
+    const actionUrl = config.webhookBaseUrl
+      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
+      : '/api/twilio/procesar-voz';
+
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">No pude entenderte. ¿Podrías repetirlo?</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="auto" action="/api/twilio/procesar-voz" method="POST">
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
   </Gather>
   <Say language="es-MX" voice="Polly.Mia">Sigo sin escucharte. Hasta luego.</Say>
   <Hangup/>
@@ -109,8 +153,23 @@ export async function handleVoiceInput(req, res, procesarConIA) {
   }
 
   try {
-    // Procesar con la IA
-    const respuestaIA = await procesarConIA(speechResult, { canal: 'telefono', callSid });
+    // Procesar con la IA incluyendo el historial de la sesión
+    const respuestaIA = await procesarConIA(speechResult, {
+      canal: 'telefono',
+      callSid,
+      sesion: {
+        historial: session.historial
+      }
+    });
+
+    // Actualizar historial en la sesión
+    session.historial.push({ rol: 'usuario', mensaje: speechResult });
+    session.historial.push({ rol: 'asistente', mensaje: respuestaIA.mensaje });
+
+    // Mantener solo los últimos 10 mensajes para no saturar el prompt
+    if (session.historial.length > 10) {
+      session.historial = session.historial.slice(-10);
+    }
 
     // Limpiar respuesta para voz (quitar markdown, emojis, etc.)
     let mensajeLimpio = respuestaIA.mensaje
@@ -129,13 +188,18 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     console.log(`🤖 [VOICE] Respuesta IA: "${mensajeLimpio.substring(0, 100)}..."`);
 
     // Generar TwiML con respuesta
+    const config = getConfig();
+    const actionUrl = config.webhookBaseUrl
+      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
+      : '/api/twilio/procesar-voz';
+
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">${mensajeLimpio}</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="auto" action="/api/twilio/procesar-voz" method="POST">
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
   </Gather>
   <Say language="es-MX" voice="Polly.Mia">¿Hay algo más en lo que pueda ayudarte?</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="3" action="/api/twilio/procesar-voz" method="POST">
+  <Gather input="speech" language="es-MX" speechTimeout="3" action="${actionUrl}" method="POST">
   </Gather>
   <Say language="es-MX" voice="Polly.Mia">Fue un placer ayudarte. Hasta luego.</Say>
   <Hangup/>
