@@ -11,7 +11,7 @@ import feedback from './feedback.js';
 import settings from './settings.js';
 import crm from './crm/index.js';
 import training from './training.js';
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -21,9 +21,22 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3040;
 
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Requerido para webhooks de Twilio
+
+// Diagnóstico Global de Peticiones
+app.use((req, res, next) => {
+  const logEntry = `${new Date().toISOString()} | ${req.method} | ${req.url} | Body: ${JSON.stringify(req.body)} | IP: ${req.ip}\n`;
+  try {
+    const logPath = join(__dirname, 'data', 'requests.log');
+    appendFileSync(logPath, logEntry);
+  } catch (e) {
+    console.error('Error en logger global:', e.message);
+  }
+  next();
+});
 app.use(express.static('client/dist'));
 
 // Health check para Railway
@@ -1537,6 +1550,31 @@ app.post('/api/debug/voice-logs/clear', (req, res) => {
   try {
     const logPath = join(__dirname, 'data', 'voice-debug.json');
     writeFileSync(logPath, JSON.stringify([], null, 2));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Endpoint para ver TODOS los logs de peticiones
+app.get('/api/debug/all-logs', (req, res) => {
+  try {
+    const logPath = join(__dirname, 'data', 'requests.log');
+    if (!existsSync(logPath)) {
+      return res.send('No hay logs de peticiones aún.');
+    }
+    const content = readFileSync(logPath, 'utf8');
+    res.type('text/plain').send(content);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Limpiar todos los logs
+app.post('/api/debug/all-logs/clear', (req, res) => {
+  try {
+    const logPath = join(__dirname, 'data', 'requests.log');
+    writeFileSync(logPath, '');
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
