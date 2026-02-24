@@ -691,7 +691,7 @@ app.get('/api/feedback/export', (req, res) => {
 // ENDPOINTS DE CONFIGURACIÓN (SETTINGS)
 // ============================================
 
-// Obtener toda la configuración (tokens enmascarados)
+// Obtener configuración (sin secretos - solo opciones del cliente)
 app.get('/api/settings', (req, res) => {
   try {
     const config = settings.obtenerSettingsSeguro();
@@ -701,23 +701,14 @@ app.get('/api/settings', (req, res) => {
   }
 });
 
-// Guardar configuración de Twilio
-app.post('/api/settings/twilio', async (req, res) => {
+// Guardar configuración de voz (sin API key)
+app.post('/api/settings/voz', (req, res) => {
   try {
-    const { accountSid, authToken, webhookBaseUrl } = req.body;
-
-    if (!accountSid || !authToken) {
-      return res.status(400).json({ error: 'Account SID y Auth Token son requeridos' });
-    }
-
-    const ok = settings.guardarTwilio({ accountSid, authToken, webhookBaseUrl });
+    const { speakModel, listenModel, listenLanguage, audioEncoding, audioSampleRate } = req.body;
+    const ok = settings.guardarVozConfig({ speakModel, listenModel, listenLanguage, audioEncoding, audioSampleRate });
 
     if (ok) {
-      // Reiniciar Twilio con nuevas credenciales
-      if (twilioVoice) {
-        twilioVoice.default.initTwilio();
-      }
-      res.json({ success: true, mensaje: 'Configuración de Twilio guardada' });
+      res.json({ success: true, mensaje: 'Configuración de voz guardada' });
     } else {
       res.status(500).json({ error: 'Error guardando configuración' });
     }
@@ -726,92 +717,57 @@ app.post('/api/settings/twilio', async (req, res) => {
   }
 });
 
-// Guardar configuración de Telegram
-app.post('/api/settings/telegram', async (req, res) => {
-  try {
-    const { botToken, botUsername } = req.body;
-
-    if (!botToken) {
-      return res.status(400).json({ error: 'Bot Token es requerido' });
-    }
-
-    const ok = settings.guardarTelegram({ botToken, botUsername });
-
-    if (ok) {
-      // Reiniciar Telegram con nuevas credenciales
-      if (telegram && aiAgent && documentValidator) {
-        telegram.default.initTelegram(
-          aiAgent.default.procesarConIA,
-          documentValidator.default.validarDocumento
-        );
-      }
-      res.json({ success: true, mensaje: 'Configuración de Telegram guardada' });
-    } else {
-      res.status(500).json({ error: 'Error guardando configuración' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Guardar API Keys
-app.post('/api/settings/apikeys', (req, res) => {
-  try {
-    const { vision, voz, llm, llmClaude, llmGemini, browser } = req.body;
-    const ok = settings.guardarApiKeys({ vision, voz, llm, llmClaude, llmGemini, browser });
-
-    if (ok) {
-      res.json({ success: true, mensaje: 'API Keys guardadas' });
-    } else {
-      res.status(500).json({ error: 'Error guardando API Keys' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Guardar configuración de Deepgram
-app.post('/api/settings/deepgram', (req, res) => {
-  try {
-    const { apiKey, listenModel, listenLanguage, speakModel, audioEncoding, audioSampleRate } = req.body;
-    const ok = settings.guardarDeepgram({ apiKey, listenModel, listenLanguage, speakModel, audioEncoding, audioSampleRate });
-
-    if (ok) {
-      res.json({ success: true, mensaje: 'Configuración de Deepgram guardada' });
-    } else {
-      res.status(500).json({ error: 'Error guardando configuración de Deepgram' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Guardar configuración de LLM
-app.post('/api/settings/llm-config', (req, res) => {
+// Guardar configuración de LLM (sin API key)
+app.post('/api/settings/llm', (req, res) => {
   try {
     const { provider, temperature } = req.body;
     const ok = settings.guardarLlmConfig({ provider, temperature });
 
     if (ok) {
-      res.json({ success: true, mensaje: 'Configuración de LLM guardada' });
+      res.json({ success: true, mensaje: 'Configuración de IA guardada' });
     } else {
-      res.status(500).json({ error: 'Error guardando configuración de LLM' });
+      res.status(500).json({ error: 'Error guardando configuración' });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Probar conexión con Twilio
+// Guardar valores IMSS
+app.post('/api/settings/imss', (req, res) => {
+  try {
+    const { año, uma, salarioMinimo } = req.body;
+    const ok = settings.guardarImss({ año, uma, salarioMinimo });
+
+    if (ok) {
+      res.json({ success: true, mensaje: 'Valores IMSS guardados' });
+    } else {
+      res.status(500).json({ error: 'Error guardando valores' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verificar estado de servicios (lee de env vars)
+app.get('/api/settings/status', (req, res) => {
+  try {
+    const estado = settings.obtenerEstadoServicios();
+    res.json(estado);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Probar conexión con Twilio (lee de env vars)
 app.post('/api/settings/test-twilio', async (req, res) => {
   try {
     const config = settings.obtenerTwilio();
 
     if (!config.accountSid || !config.authToken) {
-      return res.json({ conectado: false, error: 'Credenciales no configuradas' });
+      return res.json({ conectado: false, error: 'Configure TWILIO_ACCOUNT_SID y TWILIO_AUTH_TOKEN en Railway' });
     }
 
-    // Intentar crear cliente y obtener info de la cuenta
     const twilio = await import('twilio');
     const client = twilio.default(config.accountSid, config.authToken);
     const account = await client.api.accounts(config.accountSid).fetch();
@@ -832,13 +788,13 @@ app.post('/api/settings/test-twilio', async (req, res) => {
   }
 });
 
-// Probar conexión con Telegram
+// Probar conexión con Telegram (lee de env vars)
 app.post('/api/settings/test-telegram', async (req, res) => {
   try {
     const config = settings.obtenerTelegram();
 
     if (!config.botToken) {
-      return res.json({ conectado: false, error: 'Bot Token no configurado' });
+      return res.json({ conectado: false, error: 'Configure TELEGRAM_BOT_TOKEN en Railway' });
     }
 
     // Verificar bot con API de Telegram

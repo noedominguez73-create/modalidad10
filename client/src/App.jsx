@@ -100,19 +100,16 @@ function App() {
     }
   }
 
-  // Settings state
+  // Settings state (solo opciones del cliente, NO secretos)
   const [settingsData, setSettingsData] = useState({
-    twilio: { accountSid: '', authToken: '', webhookBaseUrl: '' },
-    telegram: { botToken: '', botUsername: '' },
-    apiKeys: { vision: '', voz: '', llm: '', llmClaude: '', llmGemini: '', browser: '' },
-    deepgram: { apiKey: '', listenModel: 'nova-3', listenLanguage: 'es', speakModel: 'aura-2-selena-es', audioEncoding: 'linear16', audioSampleRate: 24000 },
-    llmConfig: { provider: 'gemini', temperature: 0.7 },
-    numeros: []
+    servicios: { twilio: false, telegram: false, deepgram: false, llmConfigurado: false },
+    voz: { speakModel: 'aura-2-selena-es', listenModel: 'nova-3', listenLanguage: 'es' },
+    llm: { provider: 'gemini', temperature: 0.7 },
+    numeros: [],
+    imss: { año: 2025, uma: {}, salarioMinimo: {} }
   })
-  const [twilioStatus, setTwilioStatus] = useState({ conectado: false, cargando: false })
-  const [telegramStatus, setTelegramStatus] = useState({ conectado: false, cargando: false })
+  const [serviciosStatus, setServiciosStatus] = useState({ twilio: false, telegram: false, deepgram: false, llmConfigurado: false })
   const [nuevoNumero, setNuevoNumero] = useState({ nombre: '', numero: '', tipo: 'voz' })
-  const [showToken, setShowToken] = useState({ twilio: false, telegram: false, vision: false, voz: false, llm: false, llmClaude: false, llmGemini: false, deepgram: false, browser: false })
   const [settingsMsg, setSettingsMsg] = useState('')
   const [qrModal, setQrModal] = useState({ visible: false, numero: '', nombre: '' })
 
@@ -244,24 +241,24 @@ function App() {
       const res = await fetch('/api/settings')
       const data = await res.json()
       setSettingsData(data)
-      setTwilioStatus(prev => ({ ...prev, conectado: data.twilio.configurado }))
-      setTelegramStatus(prev => ({ ...prev, conectado: data.telegram.configurado }))
+      setServiciosStatus(data.servicios || {})
     } catch (err) {
       console.error('Error cargando settings:', err)
     }
   }
 
-  const guardarTwilio = async () => {
+  // Guardar configuración de voz
+  const guardarVozConfig = async () => {
     try {
       setSettingsMsg('')
-      const res = await fetch('/api/settings/twilio', {
+      const res = await fetch('/api/settings/voz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsData.twilio)
+        body: JSON.stringify(settingsData.voz)
       })
       const data = await res.json()
       if (data.success) {
-        setSettingsMsg('Twilio guardado correctamente')
+        setSettingsMsg('Configuración de voz guardada')
         cargarSettings()
       } else {
         setSettingsMsg('Error: ' + data.error)
@@ -271,17 +268,18 @@ function App() {
     }
   }
 
-  const guardarTelegram = async () => {
+  // Guardar configuración de LLM
+  const guardarLlmConfig = async () => {
     try {
       setSettingsMsg('')
-      const res = await fetch('/api/settings/telegram', {
+      const res = await fetch('/api/settings/llm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsData.telegram)
+        body: JSON.stringify(settingsData.llm)
       })
       const data = await res.json()
       if (data.success) {
-        setSettingsMsg('Telegram guardado correctamente')
+        setSettingsMsg('Configuración de IA guardada')
         cargarSettings()
       } else {
         setSettingsMsg('Error: ' + data.error)
@@ -291,72 +289,29 @@ function App() {
     }
   }
 
-  const guardarApiKeys = async () => {
+  // Verificar estado de servicios
+  const verificarServicios = async () => {
     try {
-      setSettingsMsg('')
-      // Guardar API Keys
-      const res = await fetch('/api/settings/apikeys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsData.apiKeys)
-      })
-      // Guardar LLM Config también
-      await fetch('/api/settings/llm-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsData.llmConfig)
-      })
-      const data = await res.json()
-      if (data.success) {
-        setSettingsMsg('Configuración guardada correctamente')
-        cargarSettings()
-      } else {
-        setSettingsMsg('Error: ' + data.error)
+      const [twilioRes, telegramRes] = await Promise.all([
+        fetch('/api/settings/test-twilio', { method: 'POST' }),
+        fetch('/api/settings/test-telegram', { method: 'POST' })
+      ])
+      const twilioData = await twilioRes.json()
+      const telegramData = await telegramRes.json()
+
+      setServiciosStatus(prev => ({
+        ...prev,
+        twilio: twilioData.conectado,
+        telegram: telegramData.conectado,
+        twilioError: twilioData.error,
+        telegramError: telegramData.error
+      }))
+
+      if (twilioData.conectado || telegramData.conectado) {
+        setSettingsMsg('Verificación completada')
       }
     } catch (err) {
-      setSettingsMsg('Error de conexion')
-    }
-  }
-
-  const guardarDeepgram = async () => {
-    try {
-      setSettingsMsg('')
-      const res = await fetch('/api/settings/deepgram', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingsData.deepgram)
-      })
-      const data = await res.json()
-      if (data.success) {
-        setSettingsMsg('Configuración de Deepgram guardada')
-        cargarSettings()
-      } else {
-        setSettingsMsg('Error: ' + data.error)
-      }
-    } catch (err) {
-      setSettingsMsg('Error de conexion')
-    }
-  }
-
-  const probarTwilio = async () => {
-    setTwilioStatus(prev => ({ ...prev, cargando: true }))
-    try {
-      const res = await fetch('/api/settings/test-twilio', { method: 'POST' })
-      const data = await res.json()
-      setTwilioStatus({ conectado: data.conectado, cargando: false, cuenta: data.cuenta, error: data.error })
-    } catch (err) {
-      setTwilioStatus({ conectado: false, cargando: false, error: 'Error de conexion' })
-    }
-  }
-
-  const probarTelegram = async () => {
-    setTelegramStatus(prev => ({ ...prev, cargando: true }))
-    try {
-      const res = await fetch('/api/settings/test-telegram', { method: 'POST' })
-      const data = await res.json()
-      setTelegramStatus({ conectado: data.conectado, cargando: false, bot: data.bot, error: data.error })
-    } catch (err) {
-      setTelegramStatus({ conectado: false, cargando: false, error: 'Error de conexion' })
+      setSettingsMsg('Error verificando servicios')
     }
   }
 
@@ -1485,32 +1440,32 @@ function App() {
               <div className="services-status">
                 <div className="service-item">
                   <span className="service-name">Twilio (Voz/WhatsApp)</span>
-                  <span className={`status-badge ${twilioStatus.conectado ? 'connected' : 'disconnected'}`}>
-                    {twilioStatus.conectado ? 'Conectado' : 'No configurado'}
+                  <span className={`status-badge ${serviciosStatus.twilio ? 'connected' : 'disconnected'}`}>
+                    {serviciosStatus.twilio ? 'Conectado' : 'No configurado'}
                   </span>
                 </div>
                 <div className="service-item">
                   <span className="service-name">Telegram</span>
-                  <span className={`status-badge ${telegramStatus.conectado ? 'connected' : 'disconnected'}`}>
-                    {telegramStatus.conectado ? 'Conectado' : 'No configurado'}
+                  <span className={`status-badge ${serviciosStatus.telegram ? 'connected' : 'disconnected'}`}>
+                    {serviciosStatus.telegram ? 'Conectado' : 'No configurado'}
                   </span>
                 </div>
                 <div className="service-item">
                   <span className="service-name">Deepgram (Voz IA)</span>
-                  <span className={`status-badge ${settingsData.deepgram?.configurado ? 'connected' : 'disconnected'}`}>
-                    {settingsData.deepgram?.configurado ? 'Conectado' : 'No configurado'}
+                  <span className={`status-badge ${serviciosStatus.deepgram ? 'connected' : 'disconnected'}`}>
+                    {serviciosStatus.deepgram ? 'Conectado' : 'No configurado'}
                   </span>
                 </div>
                 <div className="service-item">
                   <span className="service-name">LLM (IA Conversacional)</span>
-                  <span className={`status-badge ${settingsData.apiKeys?.llmGeminiConfigurado || settingsData.apiKeys?.llmClaudeConfigurado ? 'connected' : 'disconnected'}`}>
-                    {settingsData.apiKeys?.llmGeminiConfigurado || settingsData.apiKeys?.llmClaudeConfigurado ? 'Conectado' : 'No configurado'}
+                  <span className={`status-badge ${serviciosStatus.llmConfigurado ? 'connected' : 'disconnected'}`}>
+                    {serviciosStatus.llmConfigurado ? 'Conectado' : 'No configurado'}
                   </span>
                 </div>
               </div>
 
               <div className="settings-actions">
-                <button onClick={() => { probarTwilio(); probarTelegram(); }}>
+                <button onClick={verificarServicios}>
                   Verificar Conexiones
                 </button>
               </div>
@@ -1524,8 +1479,8 @@ function App() {
               <div className="numeros-lista">
                 {settingsData.numeros.map(num => {
                   const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
-                    ? twilioStatus.conectado
-                    : (num.tipo === 'telegram' ? telegramStatus.conectado : false)
+                    ? serviciosStatus.twilio
+                    : (num.tipo === 'telegram' ? serviciosStatus.telegram : false)
                   return (
                     <div key={num.id} className={`numero-item ${estaConectado ? 'conectado' : 'desconectado'}`}>
                       <span className={`numero-status ${estaConectado ? 'online' : 'offline'}`}></span>
@@ -1591,10 +1546,10 @@ function App() {
               <div className="form-group">
                 <label>Voz del Asistente (TTS)</label>
                 <select
-                  value={settingsData.deepgram?.speakModel || 'aura-2-selena-es'}
+                  value={settingsData.voz?.speakModel || 'aura-2-selena-es'}
                   onChange={(e) => setSettingsData(prev => ({
                     ...prev,
-                    deepgram: { ...prev.deepgram, speakModel: e.target.value }
+                    voz: { ...prev.voz, speakModel: e.target.value }
                   }))}
                   className="provider-select"
                 >
@@ -1616,10 +1571,10 @@ function App() {
                 <div className="form-group">
                   <label>Modelo de Reconocimiento (STT)</label>
                   <select
-                    value={settingsData.deepgram?.listenModel || 'nova-3'}
+                    value={settingsData.voz?.listenModel || 'nova-3'}
                     onChange={(e) => setSettingsData(prev => ({
                       ...prev,
-                      deepgram: { ...prev.deepgram, listenModel: e.target.value }
+                      voz: { ...prev.voz, listenModel: e.target.value }
                     }))}
                   >
                     <option value="nova-3">Nova 3 (Mejor calidad)</option>
@@ -1632,10 +1587,10 @@ function App() {
                 <div className="form-group">
                   <label>Idioma</label>
                   <select
-                    value={settingsData.deepgram?.listenLanguage || 'es'}
+                    value={settingsData.voz?.listenLanguage || 'es'}
                     onChange={(e) => setSettingsData(prev => ({
                       ...prev,
-                      deepgram: { ...prev.deepgram, listenLanguage: e.target.value }
+                      voz: { ...prev.voz, listenLanguage: e.target.value }
                     }))}
                   >
                     <option value="es">Español (España)</option>
@@ -1646,7 +1601,7 @@ function App() {
               </div>
 
               <div className="settings-actions">
-                <button onClick={guardarDeepgram} className="primary">Guardar Configuracion de Voz</button>
+                <button onClick={guardarVozConfig} className="primary">Guardar Configuracion de Voz</button>
               </div>
             </div>
 
@@ -1658,10 +1613,10 @@ function App() {
               <div className="form-group">
                 <label>Proveedor de IA</label>
                 <select
-                  value={settingsData.llmConfig?.provider || 'gemini'}
+                  value={settingsData.llm?.provider || 'gemini'}
                   onChange={(e) => setSettingsData(prev => ({
                     ...prev,
-                    llmConfig: { ...prev.llmConfig, provider: e.target.value }
+                    llm: { ...prev.llm, provider: e.target.value }
                   }))}
                   className="provider-select"
                 >
@@ -1673,22 +1628,22 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label>Creatividad: {settingsData.llmConfig?.temperature || 0.7} ({settingsData.llmConfig?.temperature < 0.3 ? 'Preciso' : settingsData.llmConfig?.temperature > 0.7 ? 'Creativo' : 'Balanceado'})</label>
+                <label>Creatividad: {settingsData.llm?.temperature || 0.7} ({settingsData.llm?.temperature < 0.3 ? 'Preciso' : settingsData.llm?.temperature > 0.7 ? 'Creativo' : 'Balanceado'})</label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.1"
-                  value={settingsData.llmConfig?.temperature || 0.7}
+                  value={settingsData.llm?.temperature || 0.7}
                   onChange={(e) => setSettingsData(prev => ({
                     ...prev,
-                    llmConfig: { ...prev.llmConfig, temperature: parseFloat(e.target.value) }
+                    llm: { ...prev.llm, temperature: parseFloat(e.target.value) }
                   }))}
                 />
               </div>
 
               <div className="settings-actions">
-                <button onClick={guardarApiKeys} className="primary">Guardar Configuracion de IA</button>
+                <button onClick={guardarLlmConfig} className="primary">Guardar Configuracion de IA</button>
               </div>
             </div>
 
@@ -1790,8 +1745,8 @@ function App() {
               <div className="numeros-lista">
                 {settingsData.numeros.map(num => {
                   const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
-                    ? twilioStatus.conectado
-                    : (num.tipo === 'telegram' ? telegramStatus.conectado : false)
+                    ? serviciosStatus.twilio
+                    : (num.tipo === 'telegram' ? serviciosStatus.telegram : false)
                   return (
                     <div key={num.id} className={`numero-item ${estaConectado ? 'conectado' : 'desconectado'}`}>
                       <span className={`numero-status ${estaConectado ? 'online' : 'offline'}`}></span>
