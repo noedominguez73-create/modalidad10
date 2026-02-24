@@ -1624,6 +1624,7 @@ function App() {
                   <option value="anthropic">Anthropic Claude</option>
                   <option value="openai">OpenAI GPT-4</option>
                   <option value="groq">Groq (Llama - Rápido)</option>
+                  <option value="glm5">GLM-5 (Zhipu AI - Multimodal)</option>
                 </select>
               </div>
 

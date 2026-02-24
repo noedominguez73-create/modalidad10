@@ -112,6 +112,7 @@ export function obtenerApiKeys() {
     anthropic: process.env.ANTHROPIC_API_KEY || '',
     gemini: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
     groq: process.env.GROQ_API_KEY || '',
+    glm5: process.env.ZHIPU_API_KEY || process.env.GLM5_API_KEY || '',
     deepgram: process.env.DEEPGRAM_API_KEY || '',
     vision: process.env.VISION_API_KEY || process.env.OPENAI_API_KEY || '',
     browser: process.env.BROWSERLESS_API_KEY || ''
@@ -134,7 +135,8 @@ export function obtenerEstadoServicios() {
     anthropic: !!keys.anthropic,
     gemini: !!keys.gemini,
     groq: !!keys.groq,
-    llmConfigurado: !!(keys.openai || keys.anthropic || keys.gemini || keys.groq)
+    glm5: !!keys.glm5,
+    llmConfigurado: !!(keys.openai || keys.anthropic || keys.gemini || keys.groq || keys.glm5)
   };
 }
 
