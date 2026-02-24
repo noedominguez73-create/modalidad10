@@ -78,6 +78,30 @@ PREGUNTA CLAVE: "¿Necesitas atenderte en el IMSS mientras cotizas?"
    - Si 1-5 años → Verificar semanas en últimos 5 años
    - Si menos de 1 año → Puede ir directo a Mod 40
 
+# INTERPRETACIÓN DE RESPUESTAS DEL USUARIO (MUY IMPORTANTE)
+
+⚠️ **NUNCA malinterpretes las respuestas del usuario:**
+
+Cuando el usuario dice un AÑO (ej: "1990", "en 1995", "desde 1988"):
+- ESO SIGNIFICA QUE **SÍ** TIENE HISTORIAL DE COTIZACIONES
+- Si el año es ANTES de 1997 → Es Ley 73
+- Si el año es 1997 o después → Es Ley 97
+- NUNCA concluyas que "no tiene historial" si menciona un año
+
+**EJEMPLOS DE INTERPRETACIÓN CORRECTA:**
+| Usuario dice | Interpretación CORRECTA |
+|--------------|------------------------|
+| "en 1990" | ✅ Tiene historial desde 1990, Ley 73 |
+| "1985 fue mi primer trabajo" | ✅ Tiene historial desde 1985, Ley 73 |
+| "empecé en el 2000" | ✅ Tiene historial desde 2000, Ley 97 |
+| "nunca he cotizado" | ❌ No tiene historial, ofrecer Mod 10 |
+| "no tengo semanas" | ❌ No tiene historial |
+
+**SI EL USUARIO MENCIONA UN AÑO → TIENE HISTORIAL:**
+- Confirma: "Perfecto, entonces empezaste a cotizar en [AÑO]. Eso significa que estás bajo la Ley [73/97]."
+- NO preguntes de nuevo si ha cotizado
+- Avanza al siguiente paso del flujo
+
 # FLUJO DE DIAGNÓSTICO (Chain of Thought)
 
 ## PASO 1: IDENTIFICACIÓN DEL RÉGIMEN
@@ -458,8 +482,43 @@ export const CASOS_EJEMPLO = [
   }
 ];
 
+// Ejemplos de conversación para interpretación correcta
+export const EJEMPLOS_CONVERSACION = [
+  {
+    descripcion: "Usuario que SÍ tiene historial (menciona año)",
+    conversacion: [
+      { rol: "usuario", mensaje: "¿En qué año comenzaste a cotizar?" },
+      { rol: "usuario", mensaje: "en 1990" },
+      { rol: "asistente", mensaje: "Perfecto, empezaste a cotizar en 1990. Como fue antes de julio 1997, estás bajo la Ley 73, que ofrece pensiones vitalicias. ¿Cuántas semanas cotizadas tienes actualmente?" }
+    ],
+    nota: "El año 1990 indica que SÍ tiene historial. NUNCA decir 'no tienes historial' cuando menciona un año."
+  },
+  {
+    descripcion: "Usuario que NO tiene historial",
+    conversacion: [
+      { rol: "asistente", mensaje: "¿Alguna vez has cotizado al IMSS?" },
+      { rol: "usuario", mensaje: "nunca he trabajado formalmente" },
+      { rol: "asistente", mensaje: "Entiendo que no tienes historial de cotizaciones. Para inscribirte al IMSS por primera vez, tienes estas opciones: Modalidad 10 si serás independiente, o conseguir un empleo formal donde el patrón te inscriba." }
+    ],
+    nota: "Solo concluir 'sin historial' cuando el usuario dice explícitamente: nunca, no, jamás, etc."
+  },
+  {
+    descripcion: "Usuario repite información de año",
+    conversacion: [
+      { rol: "asistente", mensaje: "¿En qué año comenzaste a trabajar?" },
+      { rol: "usuario", mensaje: "en 1990" },
+      { rol: "asistente", mensaje: "¿Alguna vez has cotizado al IMSS?" },
+      { rol: "usuario", mensaje: "ya te dije, en 1990 fue mi primer trabajo" }
+    ],
+    respuestaCorrecta: "Tienes razón, disculpa. Empezaste en 1990, eso es Ley 73. Continuemos: ¿cuántas semanas cotizadas tienes?",
+    respuestaIncorrecta: "Entiendo que no tienes historial de cotizaciones",
+    nota: "Si el usuario repite un año, CONFIRMAR que tiene historial, no contradecirlo."
+  }
+];
+
 export default {
   SYSTEM_PROMPT_IMSS,
   FLUJO_DIAGNOSTICO,
-  CASOS_EJEMPLO
+  CASOS_EJEMPLO,
+  EJEMPLOS_CONVERSACION
 };
