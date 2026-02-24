@@ -21,6 +21,16 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3040;
 
+// Logs en memoria (Resistente a sistemas de archivos de solo lectura como Railway)
+const memoryLogs = [];
+const addMemoryLog = (section, data) => {
+  memoryLogs.push({
+    timestamp: new Date().toISOString(),
+    section,
+    ...data
+  });
+  if (memoryLogs.length > 100) memoryLogs.shift();
+};
 
 app.use(cors());
 app.use(express.json());
@@ -28,13 +38,16 @@ app.use(express.urlencoded({ extended: true })); // Requerido para webhooks de T
 
 // Diagnóstico Global de Peticiones
 app.use((req, res, next) => {
-  const logEntry = `${new Date().toISOString()} | ${req.method} | ${req.url} | Body: ${JSON.stringify(req.body)} | IP: ${req.ip}\n`;
-  try {
-    const logPath = join(__dirname, 'data', 'requests.log');
-    appendFileSync(logPath, logEntry);
-  } catch (e) {
-    console.error('Error en logger global:', e.message);
-  }
+  addMemoryLog('request', {
+    method: req.method,
+    url: req.url,
+    body: (req.method === 'POST') ? req.body : undefined,
+    headers: {
+      'host': req.headers.host,
+      'x-real-ip': req.headers['x-real-ip'],
+      'user-agent': req.headers['user-agent']
+    }
+  });
   next();
 });
 app.use(express.static('client/dist'));
@@ -1531,54 +1544,20 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Endpoint para ver los logs de voz (DIAGNÓSTICO)
-app.get('/api/debug/voice-logs', (req, res) => {
-  try {
-    const logPath = join(__dirname, 'data', 'voice-debug.json');
-    if (!existsSync(logPath)) {
-      return res.json({ message: 'No hay logs aún o el archivo no existe.', path: logPath });
-    }
-    const logs = JSON.parse(readFileSync(logPath, 'utf8'));
-    res.json(logs);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+// Endpoint para ver los logs en memoria (DIAGNÓSTICO DEFINITIVO)
+app.get('/api/debug/logs', (req, res) => {
+  res.json({
+    info: 'Logs en memoria (últimos 100 eventos)',
+    count: memoryLogs.length,
+    serverTime: new Date().toISOString(),
+    logs: memoryLogs
+  });
 });
 
-// Limpiar logs
-app.post('/api/debug/voice-logs/clear', (req, res) => {
-  try {
-    const logPath = join(__dirname, 'data', 'voice-debug.json');
-    writeFileSync(logPath, JSON.stringify([], null, 2));
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Endpoint para ver TODOS los logs de peticiones
-app.get('/api/debug/all-logs', (req, res) => {
-  try {
-    const logPath = join(__dirname, 'data', 'requests.log');
-    if (!existsSync(logPath)) {
-      return res.send('No hay logs de peticiones aún.');
-    }
-    const content = readFileSync(logPath, 'utf8');
-    res.type('text/plain').send(content);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Limpiar todos los logs
-app.post('/api/debug/all-logs/clear', (req, res) => {
-  try {
-    const logPath = join(__dirname, 'data', 'requests.log');
-    writeFileSync(logPath, '');
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+// Limpiar logs en memoria
+app.post('/api/debug/logs/clear', (req, res) => {
+  memoryLogs.length = 0;
+  res.json({ success: true, message: 'Logs limpiados' });
 });
 
 // Fallback SPA - servir index.html para cualquier ruta no-API
