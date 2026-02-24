@@ -38,6 +38,16 @@ function logDebug(section, data) {
 // Cliente Twilio
 let client = null;
 
+// Obtener URL de acción absoluta para Twilio
+function obtenerActionUrl(req) {
+  const config = getConfig();
+  const protocol = req.headers['x-forwarded-proto'] || 'http';
+  const host = req.headers.host;
+  const dynamicBaseUrl = `${protocol}://${host}`;
+  const baseUrl = config.webhookBaseUrl || dynamicBaseUrl;
+  return (baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl) + '/api/twilio/procesar-voz';
+}
+
 
 // Almacén de sesiones en memoria (para historial de voz)
 const voiceSessions = new Map();
@@ -85,10 +95,16 @@ export function generarRespuestaVoz(mensaje, opciones = {}) {
 
   // Si necesita capturar entrada de voz - usar URL absoluta si está disponible
   if (opciones.esperarRespuesta) {
-    const config = getConfig();
-    const actionUrl = config.webhookBaseUrl
-      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
-      : '/api/twilio/procesar-voz';
+    // IMPORTANTE: generarRespuestaVoz ahora requiere 'req' para URLs absolutas si se espera respuesta
+    let actionUrl = '/api/twilio/procesar-voz';
+    if (opciones.req) {
+      actionUrl = obtenerActionUrl(opciones.req);
+    } else {
+      const config = getConfig();
+      if (config.webhookBaseUrl) {
+        actionUrl = (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz';
+      }
+    }
 
     response.gather({
       input: 'speech',
@@ -129,9 +145,14 @@ export function handleIncomingCall(req, res) {
 
     // Generar TwiML directamente (más confiable)
     const config = getConfig();
-    const actionUrl = config.webhookBaseUrl
-      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
-      : '/api/twilio/procesar-voz';
+
+    // Detectar URL base dinámicamente si no está configurada
+    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    const host = req.headers.host;
+    const dynamicBaseUrl = `${protocol}://${host}`;
+    const baseUrl = config.webhookBaseUrl || dynamicBaseUrl;
+
+    const actionUrl = (baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl) + '/api/twilio/procesar-voz';
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -174,10 +195,7 @@ export async function handleVoiceInput(req, res, procesarConIA) {
 
   // Si no se entendió nada
   if (!speechResult) {
-    const config = getConfig();
-    const actionUrl = config.webhookBaseUrl
-      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
-      : '/api/twilio/procesar-voz';
+    const actionUrl = obtenerActionUrl(req);
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -227,10 +245,7 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     console.log(`🤖 [VOICE] Respuesta IA: "${mensajeLimpio.substring(0, 100)}..."`);
 
     // Generar TwiML con respuesta
-    const config = getConfig();
-    const actionUrl = config.webhookBaseUrl
-      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
-      : '/api/twilio/procesar-voz';
+    const actionUrl = obtenerActionUrl(req);
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -258,11 +273,12 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     console.error('❌ [VOICE] Error procesando voz:', error);
     logDebug('error_voice_input', { error: error.message, stack: error.stack });
 
+    const actionUrl = obtenerActionUrl(req);
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">Disculpa, tuve un problema técnico. ¿Podrías repetir tu pregunta?</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="auto" action="/api/twilio/procesar-voz" method="POST">
-  </Gather>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
+    </Gather>
   <Say language="es-MX" voice="Polly.Mia">Lo siento, sigo teniendo problemas. Por favor intenta más tarde. Adiós.</Say>
   <Hangup/>
 </Response>`;
