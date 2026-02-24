@@ -1,13 +1,22 @@
 /**
  * TWILIO VOICE - Llamadas telefónicas con IA
- * Integración con Whisper (STT) y OpenAI TTS
+ * Integración con Deepgram TTS para voz natural
  */
 
 import twilio from 'twilio';
 import settings from '../settings.js';
+import { generarAudio } from './deepgram-tts.js';
 import { appendFileSync, existsSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+// Cache de audio en memoria (para evitar regenerar el mismo audio)
+const audioCache = new Map();
+
+// Limpiar cache cada 10 minutos
+setInterval(() => {
+  audioCache.clear();
+}, 600000);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -65,6 +74,52 @@ setInterval(() => {
 // Obtener configuración actual
 function getConfig() {
   return settings.obtenerTwilio();
+}
+
+// Verificar si Deepgram está disponible
+function tieneDeepgram() {
+  const apiKeys = settings.obtenerApiKeys();
+  return !!apiKeys.deepgram;
+}
+
+// Generar audio con Deepgram y guardarlo en cache
+async function generarAudioDeepgram(texto, id) {
+  const cacheKey = `${id}_${texto.substring(0, 50)}`;
+
+  if (audioCache.has(cacheKey)) {
+    return audioCache.get(cacheKey);
+  }
+
+  try {
+    const audioBuffer = await generarAudio(texto);
+    audioCache.set(cacheKey, audioBuffer);
+    return audioBuffer;
+  } catch (error) {
+    console.error('❌ Error generando audio Deepgram:', error.message);
+    return null;
+  }
+}
+
+// Obtener audio del cache
+export function obtenerAudioCache(id) {
+  for (const [key, value] of audioCache.entries()) {
+    if (key.startsWith(id)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+// Generar TwiML con Deepgram (Play) o Polly (Say) como fallback
+function generarTwimlHablar(texto, baseUrl, audioId) {
+  if (tieneDeepgram()) {
+    // Usar Deepgram - pre-generar el audio
+    const audioUrl = `${baseUrl}/api/tts/${audioId}`;
+    return `<Play>${audioUrl}</Play>`;
+  } else {
+    // Fallback a Polly
+    return `<Say language="es-MX" voice="Polly.Mia">${texto}</Say>`;
+  }
 }
 
 export function initTwilio() {
@@ -131,7 +186,7 @@ export function generarRespuestaVoz(mensaje, opciones = {}) {
 }
 
 // Webhook: Llamada entrante
-export function handleIncomingCall(req, res) {
+export async function handleIncomingCall(req, res) {
   try {
     const { Called, Caller, CallSid } = req.body || {};
     console.log(`📞 [VOICE] Llamada entrante: ${Caller} -> ${Called}, SID: ${CallSid}`);
@@ -143,29 +198,63 @@ export function handleIncomingCall(req, res) {
       caller: Caller
     });
 
-    // Generar TwiML directamente (más confiable)
+    // Generar TwiML directamente
     const config = getConfig();
 
-    // Detectar URL base dinámicamente si no está configurada
-    const protocol = req.headers['x-forwarded-proto'] || 'http';
+    // Detectar URL base dinámicamente
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
     const host = req.headers.host;
     const dynamicBaseUrl = `${protocol}://${host}`;
-    const baseUrl = config.webhookBaseUrl || dynamicBaseUrl;
+    const baseUrl = (config.webhookBaseUrl || dynamicBaseUrl).replace(/\/$/, '');
 
-    const actionUrl = (baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl) + '/api/twilio/procesar-voz';
+    const actionUrl = `${baseUrl}/api/twilio/procesar-voz`;
 
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    // Mensajes de bienvenida
+    const msgBienvenida = 'Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?';
+    const msgEscucho = 'Te escucho.';
+    const msgNoEscuche = 'No escuché nada. Si necesitas ayuda, vuelve a llamar. Hasta luego.';
+
+    let twiml;
+
+    if (tieneDeepgram()) {
+      // Pre-generar audios con Deepgram
+      const audioId1 = `welcome_${CallSid}`;
+      const audioId2 = `listen_${CallSid}`;
+      const audioId3 = `bye_${CallSid}`;
+
+      await Promise.all([
+        generarAudioDeepgram(msgBienvenida, audioId1),
+        generarAudioDeepgram(msgEscucho, audioId2),
+        generarAudioDeepgram(msgNoEscuche, audioId3)
+      ]);
+
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-MX" voice="Polly.Mia">Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?</Say>
+  <Play>${baseUrl}/api/tts/${audioId1}</Play>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
-    <Say language="es-MX" voice="Polly.Mia">Te escucho.</Say>
+    <Play>${baseUrl}/api/tts/${audioId2}</Play>
   </Gather>
-  <Say language="es-MX" voice="Polly.Mia">No escuché nada. Si necesitas ayuda, vuelve a llamar. Hasta luego.</Say>
+  <Play>${baseUrl}/api/tts/${audioId3}</Play>
   <Hangup/>
 </Response>`;
 
-    // Loguear intento
-    logDebug('incoming_call', { Caller, Called, CallSid });
+      console.log('🔊 Usando Deepgram TTS para voz natural');
+    } else {
+      // Fallback a Polly
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">${msgBienvenida}</Say>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
+    <Say language="es-MX" voice="Polly.Mia">${msgEscucho}</Say>
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">${msgNoEscuche}</Say>
+  <Hangup/>
+</Response>`;
+
+      console.log('📢 Usando Polly TTS (Deepgram no configurado)');
+    }
+
+    logDebug('incoming_call', { Caller, Called, CallSid, usandoDeepgram: tieneDeepgram() });
 
     res.type('text/xml');
     res.send(twiml);
@@ -246,8 +335,38 @@ export async function handleVoiceInput(req, res, procesarConIA) {
 
     // Generar TwiML con respuesta
     const actionUrl = obtenerActionUrl(req);
+    const config = getConfig();
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host;
+    const baseUrl = (config.webhookBaseUrl || `${protocol}://${host}`).replace(/\/$/, '');
 
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    let twiml;
+
+    if (tieneDeepgram()) {
+      // Generar audios con Deepgram
+      const audioIdResp = `resp_${callSid}_${Date.now()}`;
+      const audioIdMas = `mas_${callSid}`;
+      const audioIdBye = `bye2_${callSid}`;
+
+      await Promise.all([
+        generarAudioDeepgram(mensajeLimpio, audioIdResp),
+        generarAudioDeepgram('¿Hay algo más en lo que pueda ayudarte?', audioIdMas),
+        generarAudioDeepgram('Fue un placer ayudarte. Hasta luego.', audioIdBye)
+      ]);
+
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${baseUrl}/api/tts/${audioIdResp}</Play>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
+  </Gather>
+  <Play>${baseUrl}/api/tts/${audioIdMas}</Play>
+  <Gather input="speech" language="es-MX" speechTimeout="3" action="${actionUrl}" method="POST">
+  </Gather>
+  <Play>${baseUrl}/api/tts/${audioIdBye}</Play>
+  <Hangup/>
+</Response>`;
+    } else {
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">${mensajeLimpio}</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
@@ -258,6 +377,7 @@ export async function handleVoiceInput(req, res, procesarConIA) {
   <Say language="es-MX" voice="Polly.Mia">Fue un placer ayudarte. Hasta luego.</Say>
   <Hangup/>
 </Response>`;
+    }
 
     logDebug('voice_input', {
       callSid,
@@ -326,5 +446,6 @@ export default {
   handleIncomingCall,
   handleVoiceInput,
   hacerLlamada,
-  enviarSMS
+  enviarSMS,
+  obtenerAudioCache
 };

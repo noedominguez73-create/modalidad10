@@ -580,6 +580,30 @@ app.get('/api/twilio/voice', (req, res) => {
   });
 });
 
+// Endpoint para servir audio de Deepgram TTS
+app.get('/api/tts/:audioId', (req, res) => {
+  const { audioId } = req.params;
+
+  if (!twilioVoice) {
+    return res.status(503).send('TTS no disponible');
+  }
+
+  const audioBuffer = twilioVoice.default.obtenerAudioCache(audioId);
+
+  if (!audioBuffer) {
+    console.log(`⚠️ Audio no encontrado en cache: ${audioId}`);
+    return res.status(404).send('Audio no encontrado');
+  }
+
+  res.set({
+    'Content-Type': 'audio/mpeg',
+    'Content-Length': audioBuffer.length,
+    'Cache-Control': 'no-cache'
+  });
+
+  res.send(audioBuffer);
+});
+
 // Alias para compatibilidad (el usuario puede haber configurado este en Twilio)
 app.post('/api/voice/incoming', (req, res) => {
   const { Called, Caller, CallSid } = req.body;
