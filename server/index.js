@@ -21,7 +21,9 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3040;
 
-// Logs en memoria (Resistente a sistemas de archivos de solo lectura como Railway)
+// ============================================
+// DIAGNÓSTICO NUCLEAR (AL INICIO)
+// ============================================
 const memoryLogs = [];
 const addMemoryLog = (section, data) => {
   memoryLogs.push({
@@ -29,8 +31,25 @@ const addMemoryLog = (section, data) => {
     section,
     ...data
   });
-  if (memoryLogs.length > 100) memoryLogs.shift();
+  if (memoryLogs.length > 200) memoryLogs.shift();
 };
+
+// Endpoint de diagnóstico con máxima prioridad
+app.get('/api/debug/logs', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.json({
+    status: 'diagnostic_active',
+    count: memoryLogs.length,
+    serverTime: new Date().toISOString(),
+    logs: memoryLogs
+  });
+});
+
+// Limpiar logs
+app.post('/api/debug/logs/clear', (req, res) => {
+  memoryLogs.length = 0;
+  res.json({ success: true, message: 'Logs limpiados' });
+});
 
 app.use(cors());
 app.use(express.json());
@@ -1544,21 +1563,6 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// Endpoint para ver los logs en memoria (DIAGNÓSTICO DEFINITIVO)
-app.get('/api/debug/logs', (req, res) => {
-  res.json({
-    info: 'Logs en memoria (últimos 100 eventos)',
-    count: memoryLogs.length,
-    serverTime: new Date().toISOString(),
-    logs: memoryLogs
-  });
-});
-
-// Limpiar logs en memoria
-app.post('/api/debug/logs/clear', (req, res) => {
-  memoryLogs.length = 0;
-  res.json({ success: true, message: 'Logs limpiados' });
-});
 
 // Fallback SPA - servir index.html para cualquier ruta no-API
 app.get('*', (req, res) => {
