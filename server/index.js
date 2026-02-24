@@ -38,9 +38,18 @@ const addMemoryLog = (section, data) => {
 app.get('/api/debug/logs', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.json({
+    version: 'V4-NUCLEAR',
     status: 'diagnostic_active',
     count: memoryLogs.length,
     serverTime: new Date().toISOString(),
+    logs: memoryLogs
+  });
+});
+
+app.get('/debug-logs-now', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.json({
+    version: 'V4-NUCLEAR-ALT',
     logs: memoryLogs
   });
 });
