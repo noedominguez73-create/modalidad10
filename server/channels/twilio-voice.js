@@ -38,6 +38,7 @@ function logDebug(section, data) {
 // Cliente Twilio
 let client = null;
 
+
 // Almacén de sesiones en memoria (para historial de voz)
 const voiceSessions = new Map();
 
