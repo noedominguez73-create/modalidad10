@@ -490,18 +490,30 @@ async function initChannels() {
 }
 
 // Inicializar canales al arrancar
-initChannels();
+initChannels().then(() => {
+  console.log('🚀 Todos los canales cargados y listos');
+}).catch(err => {
+  console.error('💥 Error crítico inicializando canales:', err);
+});
 
 // --- TWILIO VOICE (Llamadas telefónicas) ---
 
 // Webhook: Llamada entrante
 app.post('/api/twilio/voice', (req, res) => {
-  console.log('📞 Llamada entrante recibida');
+  const { Called, Caller, CallSid } = req.body;
+  console.log(`📞 [TWILIO] Llamada entrante: ${Caller} -> ${Called} (SID: ${CallSid})`);
+
   if (!twilioVoice) {
-    console.log('❌ Twilio Voice no está configurado');
-    return res.status(503).send('Twilio no configurado');
+    console.error('❌ Twilio Voice no está cargado en el servidor');
+    return res.status(503).type('text/plain').send('Servicio de voz no disponible temporalmente. Reintenta en unos segundos.');
   }
-  twilioVoice.default.handleIncomingCall(req, res);
+
+  try {
+    twilioVoice.default.handleIncomingCall(req, res);
+  } catch (err) {
+    console.error('❌ Error en handleIncomingCall:', err);
+    res.status(500).send('Error interno procesando llamada');
+  }
 });
 
 // También aceptar GET para verificar que el endpoint funciona
@@ -516,34 +528,46 @@ app.get('/api/twilio/voice', (req, res) => {
 
 // Alias para compatibilidad (el usuario puede haber configurado este en Twilio)
 app.post('/api/voice/incoming', (req, res) => {
-  console.log('📞 Llamada entrante recibida (alias /api/voice/incoming)');
+  const { Called, Caller, CallSid } = req.body;
+  console.log(`📞 [TWILIO-ALIAS] Llamada entrante: ${Caller} -> ${Called} (SID: ${CallSid})`);
+
   if (!twilioVoice) {
-    console.log('❌ Twilio Voice no está configurado');
-    return res.status(503).send('Twilio no configurado');
+    console.error('❌ Twilio Voice no está cargado en el servidor (alias)');
+    return res.status(503).type('text/plain').send('Servicio de voz no disponible temporalmente.');
   }
-  twilioVoice.default.handleIncomingCall(req, res);
+
+  try {
+    twilioVoice.default.handleIncomingCall(req, res);
+  } catch (err) {
+    console.error('❌ Error en handleIncomingCall (alias):', err);
+    res.status(500).send('Error interno');
+  }
 });
 
 // Webhook: Procesar voz del usuario
 app.post('/api/twilio/procesar-voz', async (req, res) => {
-  console.log('🎤 Procesando voz del usuario:', req.body.SpeechResult);
-  if (!twilioVoice) {
-    console.log('❌ Twilio Voice no configurado');
-    return res.status(503).send('Twilio no configurado');
-  }
-  if (!aiAgent) {
-    console.log('❌ Agente IA no configurado');
-    // Responder con TwiML de error en lugar de error HTTP
-    const twilio = await import('twilio');
-    const VoiceResponse = twilio.default.twiml.VoiceResponse;
+  const { SpeechResult, CallSid, Confidence } = req.body;
+  console.log(`🎤 [TWILIO] Procesando voz: "${SpeechResult}" (Confianza: ${Confidence}, SID: ${CallSid})`);
+
+  if (!twilioVoice || !aiAgent) {
+    console.error('❌ Dependencias de voz no cargadas:', { twilioVoice: !!twilioVoice, aiAgent: !!aiAgent });
+
+    const twilioLib = await import('twilio');
+    const VoiceResponse = twilioLib.default.twiml.VoiceResponse;
     const response = new VoiceResponse();
     response.say({ voice: 'Polly.Mia', language: 'es-MX' },
-      'Lo siento, el sistema de inteligencia artificial no está disponible en este momento. Por favor intenta más tarde.');
+      'Lo siento, el sistema no está listo. Por favor intenta en unos segundos.');
     response.hangup();
     res.type('text/xml');
     return res.send(response.toString());
   }
-  await twilioVoice.default.handleVoiceInput(req, res, aiAgent.default.procesarConIA);
+
+  try {
+    await twilioVoice.default.handleVoiceInput(req, res, aiAgent.default.procesarConIA);
+  } catch (err) {
+    console.error('❌ Error en handleVoiceInput:', err);
+    res.status(500).send('Error procesando voz');
+  }
 });
 
 // --- WHATSAPP ---

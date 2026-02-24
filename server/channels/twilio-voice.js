@@ -5,6 +5,35 @@
 
 import twilio from 'twilio';
 import settings from '../settings.js';
+import { appendFileSync, existsSync, writeFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const LOG_FILE = join(__dirname, '..', 'data', 'voice-debug.json');
+
+// Helper para loguear a archivo
+function logDebug(section, data) {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      section,
+      ...data
+    };
+    let logs = [];
+    if (existsSync(LOG_FILE)) {
+      try {
+        logs = JSON.parse(readFileSync(LOG_FILE, 'utf8'));
+      } catch (e) { logs = []; }
+    }
+    logs.push(entry);
+    if (logs.length > 50) logs.shift(); // Mantener últimos 50
+    writeFileSync(LOG_FILE, JSON.stringify(logs, null, 2));
+  } catch (e) {
+    console.error('Error escribiendo log de voz:', e);
+  }
+}
 
 // Cliente Twilio
 let client = null;
@@ -86,23 +115,24 @@ export function generarRespuestaVoz(mensaje, opciones = {}) {
 
 // Webhook: Llamada entrante
 export function handleIncomingCall(req, res) {
-  const { Called, Caller, CallSid } = req.body || {};
-  console.log(`📞 [VOICE] Llamada entrante: ${Caller} -> ${Called}, SID: ${CallSid}`);
+  try {
+    const { Called, Caller, CallSid } = req.body || {};
+    console.log(`📞 [VOICE] Llamada entrante: ${Caller} -> ${Called}, SID: ${CallSid}`);
 
-  // Inicializar sesión de voz con historial vacío
-  voiceSessions.set(CallSid, {
-    historial: [],
-    lastSeen: Date.now(),
-    caller: Caller
-  });
+    // Inicializar sesión de voz con historial vacío
+    voiceSessions.set(CallSid, {
+      historial: [],
+      lastSeen: Date.now(),
+      caller: Caller
+    });
 
-  // Generar TwiML directamente (más confiable)
-  const config = getConfig();
-  const actionUrl = config.webhookBaseUrl
-    ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
-    : '/api/twilio/procesar-voz';
+    // Generar TwiML directamente (más confiable)
+    const config = getConfig();
+    const actionUrl = config.webhookBaseUrl
+      ? (config.webhookBaseUrl.endsWith('/') ? config.webhookBaseUrl.slice(0, -1) : config.webhookBaseUrl) + '/api/twilio/procesar-voz'
+      : '/api/twilio/procesar-voz';
 
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
@@ -112,8 +142,16 @@ export function handleIncomingCall(req, res) {
   <Hangup/>
 </Response>`;
 
-  res.type('text/xml');
-  res.send(twiml);
+    // Loguear intento
+    logDebug('incoming_call', { Caller, Called, CallSid });
+
+    res.type('text/xml');
+    res.send(twiml);
+  } catch (err) {
+    console.error('💥 Error crítico en handleIncomingCall:', err);
+    logDebug('error_incoming', { error: err.message, stack: err.stack });
+    res.status(500).send('Error interno');
+  }
 }
 
 // Webhook: Procesar voz del usuario
@@ -205,11 +243,19 @@ export async function handleVoiceInput(req, res, procesarConIA) {
   <Hangup/>
 </Response>`;
 
+    logDebug('voice_input', {
+      callSid,
+      userSaid: speechResult,
+      aiResponded: respuestaIA.mensaje,
+      canal: 'telefono'
+    });
+
     res.type('text/xml');
     res.send(twiml);
 
   } catch (error) {
     console.error('❌ [VOICE] Error procesando voz:', error);
+    logDebug('error_voice_input', { error: error.message, stack: error.stack });
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
