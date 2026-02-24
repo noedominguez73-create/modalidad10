@@ -13,14 +13,38 @@ import settings from './settings.js';
 import db from './database.js';
 import feedbackService from './feedback.js';
 
-// Obtener API keys (primero de settings, luego de env)
+// Obtener API keys basado en el proveedor configurado
 function getApiKeys() {
   const apiKeys = settings.obtenerApiKeys();
+  const llmConfig = settings.obtenerLlmConfig();
+  const provider = llmConfig.provider || process.env.LLM_PROVIDER || 'gemini';
+
+  // Seleccionar la API key correcta según el proveedor
+  let apiKey = '';
+  switch (provider) {
+    case 'anthropic':
+      apiKey = apiKeys.anthropic;
+      break;
+    case 'openai':
+      apiKey = apiKeys.openai;
+      break;
+    case 'groq':
+      apiKey = apiKeys.groq;
+      break;
+    case 'glm5':
+      apiKey = apiKeys.glm5;
+      break;
+    case 'gemini':
+    default:
+      apiKey = apiKeys.gemini;
+      break;
+  }
+
+  console.log(`🤖 LLM Provider: ${provider}, API Key presente: ${!!apiKey}`);
+
   return {
-    llm: apiKeys.llm || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.GROQ_API_KEY,
-    provider: apiKeys.llm?.startsWith('sk-ant') ? 'anthropic' :
-              apiKeys.llm?.startsWith('gsk_') ? 'groq' :
-              process.env.LLM_PROVIDER || 'openai'
+    llm: apiKey,
+    provider: provider
   };
 }
 
@@ -29,19 +53,70 @@ async function llamarLLM(mensajes, opciones = {}) {
   const { llm: apiKey, provider } = getApiKeys();
 
   if (!apiKey) {
-    console.error('❌ No hay API Key de LLM configurada');
-    throw new Error('No hay API Key de LLM configurada. Ve a Configuración > API Keys y agrega tu clave.');
+    console.error('❌ No hay API Key de LLM configurada para provider:', provider);
+    throw new Error('No hay API Key de LLM configurada. Configura las variables de entorno en Railway.');
   }
 
-  const modelo = opciones.modelo || 'gpt-4o-mini';
+  console.log(`📤 Llamando a ${provider}...`);
 
-  if (provider === 'anthropic' || modelo.includes('claude') || apiKey.startsWith('sk-ant')) {
-    return llamarClaude(mensajes, { ...opciones, apiKey });
-  } else if (provider === 'groq' || apiKey.startsWith('gsk_')) {
-    return llamarGroq(mensajes, { ...opciones, apiKey });
-  } else {
-    return llamarOpenAI(mensajes, { ...opciones, apiKey });
+  try {
+    switch (provider) {
+      case 'anthropic':
+        return await llamarClaude(mensajes, { ...opciones, apiKey });
+      case 'groq':
+        return await llamarGroq(mensajes, { ...opciones, apiKey });
+      case 'openai':
+        return await llamarOpenAI(mensajes, { ...opciones, apiKey });
+      case 'gemini':
+      default:
+        return await llamarGemini(mensajes, { ...opciones, apiKey });
+    }
+  } catch (error) {
+    console.error(`❌ Error llamando a ${provider}:`, error.message);
+    throw error;
   }
+}
+
+// Llamar a Google Gemini
+async function llamarGemini(mensajes, opciones) {
+  const systemMsg = mensajes.find(m => m.role === 'system')?.content || '';
+  const userMsgs = mensajes.filter(m => m.role !== 'system');
+
+  // Convertir formato OpenAI a formato Gemini
+  const contents = userMsgs.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${opciones.apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: systemMsg }] },
+        generationConfig: {
+          temperature: opciones.temperature || 0.7,
+          maxOutputTokens: opciones.maxTokens || 1000
+        }
+      })
+    }
+  );
+
+  const data = await response.json();
+
+  if (data.error) {
+    console.error('❌ Error Gemini:', data.error);
+    throw new Error(data.error.message || 'Error en Gemini API');
+  }
+
+  if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+    console.error('❌ Respuesta Gemini vacía:', JSON.stringify(data));
+    throw new Error('Respuesta vacía de Gemini');
+  }
+
+  return data.candidates[0].content.parts[0].text;
 }
 
 async function llamarOpenAI(mensajes, opciones) {
