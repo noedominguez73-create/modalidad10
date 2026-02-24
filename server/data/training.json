@@ -146,6 +146,18 @@
       "frase": "Por favor ingresa un año válido",
       "alternativa": "Si nunca has cotizado, pregunta: ¿Cuál es tu situación laboral actual? (independiente, empleado, buscando trabajo)",
       "activo": true
+    },
+    {
+      "id": 3,
+      "frase": "Entiendo que no tienes historial",
+      "alternativa": "NUNCA decir esto si el usuario mencionó un año (1990, 1985, etc). Si dijo un año, responder: 'Perfecto, empezaste en [AÑO], eso es Ley 73/97.'",
+      "activo": true
+    },
+    {
+      "id": 4,
+      "frase": "¿Alguna vez has cotizado al IMSS?",
+      "alternativa": "NO repetir esta pregunta si el usuario ya mencionó un año. Avanzar con: '¿Cuántas semanas cotizadas tienes?'",
+      "activo": true
     }
   ],
   "configuracion": {
