@@ -10,8 +10,8 @@ client/node_modules/
 # Settings (credenciales sensibles)
 server/data/settings.json
 
-# NO ignorar client/dist/ para Railway
-# client/dist/
+# Build del cliente (Railway lo compila)
+client/dist/
 
 # Archivos grandes
 *.xlsx
