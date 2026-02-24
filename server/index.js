@@ -25,6 +25,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('client/dist'));
 
+// Health check para Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Cargar datos operativos
 let datosOperativos = {};
 try {
@@ -1515,3 +1520,22 @@ app.listen(PORT, () => {
 ╚═══════════════════════════════════════════════════════════════════╝
   `);
 });
+
+// Manejo de cierre limpio (Railway SIGTERM)
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} recibido. Cerrando servicios...`);
+
+  // Detener Telegram polling
+  if (telegram && telegram.default && telegram.default.stopTelegram) {
+    try {
+      telegram.default.stopTelegram();
+    } catch (e) {
+      // Ignorar errores
+    }
+  }
+
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

@@ -296,8 +296,22 @@ export async function enviarDocumento(chatId, rutaArchivo, caption = '') {
   return bot.sendDocument(chatId, rutaArchivo, { caption });
 }
 
+// Detener bot (para cierre limpio)
+export function stopTelegram() {
+  if (bot) {
+    try {
+      bot.stopPolling();
+      console.log('✓ Telegram Bot detenido');
+    } catch (e) {
+      // Ignorar errores al detener
+    }
+    bot = null;
+  }
+}
+
 export default {
   initTelegram,
+  stopTelegram,
   enviarMensaje,
   enviarDocumento,
   obtenerSesion
