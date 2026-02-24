@@ -1477,7 +1477,7 @@ function App() {
               <p className="form-hint">Configura los números de teléfono para cada canal</p>
 
               <div className="numeros-lista">
-                {settingsData.numeros.map(num => {
+                {(settingsData.numeros || []).map(num => {
                   const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
                     ? serviciosStatus.twilio
                     : (num.tipo === 'telegram' ? serviciosStatus.telegram : false)
@@ -1505,7 +1505,7 @@ function App() {
                     </div>
                   )
                 })}
-                {settingsData.numeros.length === 0 && (
+                {(!settingsData.numeros || settingsData.numeros.length === 0) && (
                   <p className="empty-state">No hay numeros configurados</p>
                 )}
               </div>
@@ -1744,7 +1744,7 @@ function App() {
               <h3>Numeros de Telefono</h3>
 
               <div className="numeros-lista">
-                {settingsData.numeros.map(num => {
+                {(settingsData.numeros || []).map(num => {
                   const estaConectado = (num.tipo === 'voz' || num.tipo === 'whatsapp')
                     ? serviciosStatus.twilio
                     : (num.tipo === 'telegram' ? serviciosStatus.telegram : false)
@@ -1772,7 +1772,7 @@ function App() {
                     </div>
                   )
                 })}
-                {settingsData.numeros.length === 0 && (
+                {(!settingsData.numeros || settingsData.numeros.length === 0) && (
                   <p className="empty-state">No hay numeros configurados</p>
                 )}
               </div>
