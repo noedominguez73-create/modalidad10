@@ -1487,6 +1487,152 @@ function App() {
               </div>
             </div>
 
+            {/* Proveedores de IA - Multi-Provider */}
+            <div className="settings-card providers-card">
+              <h3>Proveedores de IA</h3>
+              <p className="form-hint">Configura qué proveedor usa cada función. Las API Keys se configuran en Railway.</p>
+
+              {/* LLM Providers */}
+              <div className="provider-section">
+                <h4>Cerebro (LLM)</h4>
+                <div className="provider-grid">
+                  <div className={`provider-item ${serviciosStatus.gemini ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">G</span>
+                    <span className="provider-name">Gemini</span>
+                    <span className={`provider-status ${serviciosStatus.gemini ? 'online' : 'offline'}`}>
+                      {serviciosStatus.gemini ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                  <div className={`provider-item ${serviciosStatus.anthropic ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">A</span>
+                    <span className="provider-name">Claude</span>
+                    <span className={`provider-status ${serviciosStatus.anthropic ? 'online' : 'offline'}`}>
+                      {serviciosStatus.anthropic ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                  <div className={`provider-item ${serviciosStatus.groq ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">Q</span>
+                    <span className="provider-name">Groq</span>
+                    <span className={`provider-status ${serviciosStatus.groq ? 'online' : 'offline'}`}>
+                      {serviciosStatus.groq ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                  <div className={`provider-item ${serviciosStatus.openai ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">O</span>
+                    <span className="provider-name">OpenAI</span>
+                    <span className={`provider-status ${serviciosStatus.openai ? 'online' : 'offline'}`}>
+                      {serviciosStatus.openai ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                  <div className={`provider-item ${serviciosStatus.glm5 ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">Z</span>
+                    <span className="provider-name">GLM-5</span>
+                    <span className={`provider-status ${serviciosStatus.glm5 ? 'online' : 'offline'}`}>
+                      {serviciosStatus.glm5 ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* TTS Providers */}
+              <div className="provider-section">
+                <h4>Voz (TTS)</h4>
+                <div className="provider-grid">
+                  <div className={`provider-item ${serviciosStatus.deepgram ? 'available' : 'unavailable'}`}>
+                    <span className="provider-icon">D</span>
+                    <span className="provider-name">Deepgram</span>
+                    <span className={`provider-status ${serviciosStatus.deepgram ? 'online' : 'offline'}`}>
+                      {serviciosStatus.deepgram ? 'Listo' : 'Sin API'}
+                    </span>
+                  </div>
+                  <div className="provider-item available">
+                    <span className="provider-icon">P</span>
+                    <span className="provider-name">Polly</span>
+                    <span className="provider-status online">Via Twilio</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Channel Config */}
+              <div className="provider-section">
+                <h4>Configuracion por Canal</h4>
+                <div className="channel-config">
+                  <div className="channel-row">
+                    <span className="channel-icon">🌐</span>
+                    <span className="channel-name">Web</span>
+                    <select
+                      value={settingsData.llm?.provider || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        llm: { ...prev.llm, provider: e.target.value }
+                      }))}
+                      className="channel-select"
+                    >
+                      <option value="gemini">Gemini</option>
+                      <option value="anthropic">Claude</option>
+                      <option value="groq">Groq</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="glm5">GLM-5</option>
+                    </select>
+                  </div>
+                  <div className="channel-row">
+                    <span className="channel-icon">📱</span>
+                    <span className="channel-name">WhatsApp</span>
+                    <select
+                      value={settingsData.llm?.provider || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        llm: { ...prev.llm, provider: e.target.value }
+                      }))}
+                      className="channel-select"
+                    >
+                      <option value="gemini">Gemini</option>
+                      <option value="anthropic">Claude</option>
+                      <option value="groq">Groq</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="glm5">GLM-5</option>
+                    </select>
+                  </div>
+                  <div className="channel-row">
+                    <span className="channel-icon">✈️</span>
+                    <span className="channel-name">Telegram</span>
+                    <select
+                      value={settingsData.llm?.provider || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        llm: { ...prev.llm, provider: e.target.value }
+                      }))}
+                      className="channel-select"
+                    >
+                      <option value="gemini">Gemini</option>
+                      <option value="anthropic">Claude</option>
+                      <option value="groq">Groq</option>
+                      <option value="openai">OpenAI</option>
+                      <option value="glm5">GLM-5</option>
+                    </select>
+                  </div>
+                  <div className="channel-row">
+                    <span className="channel-icon">📞</span>
+                    <span className="channel-name">Llamadas</span>
+                    <select
+                      value="groq"
+                      className="channel-select"
+                    >
+                      <option value="groq">Groq (Recomendado)</option>
+                      <option value="gemini">Gemini</option>
+                    </select>
+                    <select
+                      value={settingsData.voz?.speakModel?.includes('aura') ? 'deepgram' : 'polly'}
+                      className="channel-select"
+                    >
+                      <option value="deepgram">Deepgram TTS</option>
+                      <option value="polly">Amazon Polly</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Canales de Comunicación - Números */}
             <div className="settings-card">
               <h3>Canales de Comunicacion</h3>

@@ -1,6 +1,7 @@
 /**
  * AGENTE DE IA MULTICANAL
  * Coordina el procesamiento de mensajes desde todos los canales
+ * Usa el sistema de routing multi-proveedor
  */
 
 import { calcularModalidad40, validarElegibilidadMod40 } from './calculadora.js';
@@ -13,67 +14,69 @@ import settings from './settings.js';
 import db from './database.js';
 import feedbackService from './feedback.js';
 
-// Obtener API keys basado en el proveedor configurado
-function getApiKeys() {
+// Importar router de LLM (carga diferida para evitar dependencias circulares)
+let llmRouter = null;
+
+async function getLLMRouter() {
+  if (!llmRouter) {
+    try {
+      llmRouter = await import('./providers/llm-router.js');
+    } catch (e) {
+      console.error('Error cargando LLM router:', e.message);
+    }
+  }
+  return llmRouter;
+}
+
+// Llamar al LLM usando el router con failover automático
+async function llamarLLM(mensajes, opciones = {}) {
+  const router = await getLLMRouter();
+
+  if (router) {
+    // Usar el nuevo router multi-proveedor
+    const result = await router.routeLLM(mensajes, {
+      channel: opciones.canal || 'web',
+      preferredProvider: opciones.provider,
+      temperature: opciones.temperature,
+      maxTokens: opciones.maxTokens
+    });
+
+    console.log(`✓ Respuesta de ${result.provider} (${result.model}) en ${result.latency}ms`);
+    return result.content;
+  }
+
+  // Fallback al método antiguo si el router no está disponible
+  return await llamarLLMFallback(mensajes, opciones);
+}
+
+// Fallback: método antiguo de llamada directa
+async function llamarLLMFallback(mensajes, opciones = {}) {
   const apiKeys = settings.obtenerApiKeys();
   const llmConfig = settings.obtenerLlmConfig();
   const provider = llmConfig.provider || process.env.LLM_PROVIDER || 'gemini';
 
-  // Seleccionar la API key correcta según el proveedor
   let apiKey = '';
   switch (provider) {
-    case 'anthropic':
-      apiKey = apiKeys.anthropic;
-      break;
-    case 'openai':
-      apiKey = apiKeys.openai;
-      break;
-    case 'groq':
-      apiKey = apiKeys.groq;
-      break;
-    case 'glm5':
-      apiKey = apiKeys.glm5;
-      break;
+    case 'anthropic': apiKey = apiKeys.anthropic; break;
+    case 'openai': apiKey = apiKeys.openai; break;
+    case 'groq': apiKey = apiKeys.groq; break;
+    case 'glm5': apiKey = apiKeys.glm5; break;
     case 'gemini':
-    default:
-      apiKey = apiKeys.gemini;
-      break;
+    default: apiKey = apiKeys.gemini; break;
   }
-
-  console.log(`🤖 LLM Provider: ${provider}, API Key presente: ${!!apiKey}`);
-
-  return {
-    llm: apiKey,
-    provider: provider
-  };
-}
-
-// Llamar al LLM
-async function llamarLLM(mensajes, opciones = {}) {
-  const { llm: apiKey, provider } = getApiKeys();
 
   if (!apiKey) {
-    console.error('❌ No hay API Key de LLM configurada para provider:', provider);
-    throw new Error('No hay API Key de LLM configurada. Configura las variables de entorno en Railway.');
+    throw new Error('No hay API Key de LLM configurada.');
   }
 
-  console.log(`📤 Llamando a ${provider}...`);
+  console.log(`📤 Fallback: Llamando a ${provider}...`);
 
-  try {
-    switch (provider) {
-      case 'anthropic':
-        return await llamarClaude(mensajes, { ...opciones, apiKey });
-      case 'groq':
-        return await llamarGroq(mensajes, { ...opciones, apiKey });
-      case 'openai':
-        return await llamarOpenAI(mensajes, { ...opciones, apiKey });
-      case 'gemini':
-      default:
-        return await llamarGemini(mensajes, { ...opciones, apiKey });
-    }
-  } catch (error) {
-    console.error(`❌ Error llamando a ${provider}:`, error.message);
-    throw error;
+  switch (provider) {
+    case 'anthropic': return await llamarClaude(mensajes, { ...opciones, apiKey });
+    case 'groq': return await llamarGroq(mensajes, { ...opciones, apiKey });
+    case 'openai': return await llamarOpenAI(mensajes, { ...opciones, apiKey });
+    case 'gemini':
+    default: return await llamarGemini(mensajes, { ...opciones, apiKey });
   }
 }
 

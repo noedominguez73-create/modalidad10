@@ -996,6 +996,217 @@ app.delete('/api/settings/numeros/:id', (req, res) => {
 });
 
 // ============================================
+// ENDPOINTS DE PROVEEDORES MULTI-IA
+// ============================================
+
+// Importar routers de proveedores
+let llmRouter = null;
+let ttsRouter = null;
+let providersRegistry = null;
+
+async function loadProviders() {
+  try {
+    providersRegistry = await import('./providers/index.js');
+    llmRouter = await import('./providers/llm-router.js');
+    ttsRouter = await import('./providers/tts-router.js');
+    console.log('✓ Provider routers cargados');
+  } catch (e) {
+    console.error('Error cargando providers:', e.message);
+  }
+}
+loadProviders();
+
+// Obtener lista de todos los proveedores disponibles
+app.get('/api/providers', async (req, res) => {
+  try {
+    if (!providersRegistry) await loadProviders();
+
+    res.json({
+      llm: providersRegistry.LLM_PROVIDERS,
+      tts: providersRegistry.TTS_PROVIDERS,
+      stt: providersRegistry.STT_PROVIDERS,
+      channels: providersRegistry.CHANNELS
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtener estado de conexión de todos los proveedores
+app.get('/api/providers/status', async (req, res) => {
+  try {
+    if (!providersRegistry) await loadProviders();
+
+    const status = providersRegistry.getAllProvidersStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtener configuración actual de proveedores
+app.get('/api/providers/config', (req, res) => {
+  try {
+    const config = settings.obtenerProviderConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar configuración de proveedores
+app.post('/api/providers/config', (req, res) => {
+  try {
+    const ok = settings.guardarProviderConfig(req.body);
+    if (llmRouter) llmRouter.refreshConfig();
+
+    if (ok) {
+      res.json({ success: true, mensaje: 'Configuración de proveedores guardada' });
+    } else {
+      res.status(500).json({ error: 'Error guardando configuración' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cambiar proveedor LLM por defecto
+app.post('/api/providers/llm/default', (req, res) => {
+  try {
+    const { provider } = req.body;
+    const ok = settings.setDefaultLLMProvider(provider);
+    if (llmRouter) llmRouter.refreshConfig();
+
+    res.json({ success: ok, provider });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cambiar proveedor LLM por canal
+app.post('/api/providers/llm/channel', (req, res) => {
+  try {
+    const { channel, provider } = req.body;
+    const ok = settings.setChannelLLMProvider(channel, provider);
+    if (llmRouter) llmRouter.refreshConfig();
+
+    res.json({ success: ok, channel, provider });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cambiar proveedor TTS por defecto
+app.post('/api/providers/tts/default', (req, res) => {
+  try {
+    const { provider } = req.body;
+    const ok = settings.setDefaultTTSProvider(provider);
+
+    res.json({ success: ok, provider });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cambiar voz de un proveedor TTS
+app.post('/api/providers/tts/voice', (req, res) => {
+  try {
+    const { provider, voice } = req.body;
+    const ok = settings.setTTSVoice(provider, voice);
+
+    res.json({ success: ok, provider, voice });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Probar un proveedor LLM específico
+app.post('/api/providers/test/llm/:provider', async (req, res) => {
+  try {
+    if (!llmRouter) await loadProviders();
+
+    const { provider } = req.params;
+    const { message } = req.body;
+
+    const result = await llmRouter.testProvider(provider, message || '¿Cuánto es 2+2? Responde solo el número.');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Probar todos los proveedores LLM
+app.post('/api/providers/test/llm', async (req, res) => {
+  try {
+    if (!llmRouter) await loadProviders();
+
+    const { message } = req.body;
+    const results = await llmRouter.testAllProviders(message || '¿Cuánto es 2+2? Responde solo el número.');
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Probar un proveedor TTS específico
+app.post('/api/providers/test/tts/:provider', async (req, res) => {
+  try {
+    if (!ttsRouter) await loadProviders();
+
+    const { provider } = req.params;
+    const { text } = req.body;
+
+    const result = await ttsRouter.testTTSProvider(provider, text || 'Hola, esta es una prueba de voz.');
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Generar audio de prueba
+app.post('/api/providers/tts/generate', async (req, res) => {
+  try {
+    if (!ttsRouter) await loadProviders();
+
+    const { text, provider, voice } = req.body;
+
+    const result = await ttsRouter.routeTTS(text || 'Hola, esta es una prueba.', {
+      preferredProvider: provider,
+      voice
+    });
+
+    if (result.twiml) {
+      // Es Amazon Polly via Twilio - devolver configuración
+      res.json({ success: true, twiml: true, config: result });
+    } else {
+      // Guardar audio en cache y devolver ID
+      const audioId = ttsRouter.cacheAudio(result.audio, result.provider, result.voice);
+      res.json({
+        success: true,
+        audioId,
+        provider: result.provider,
+        voice: result.voice,
+        latency: result.latency,
+        size: result.size,
+        audioUrl: `/api/tts/${audioId}`
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Obtener configuración completa del dashboard
+app.get('/api/providers/dashboard', (req, res) => {
+  try {
+    const config = settings.obtenerDashboardConfig();
+    res.json(config);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // ENTRENAMIENTO DEL AGENTE IA
 // ============================================
 

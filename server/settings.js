@@ -306,6 +306,172 @@ export function eliminarNumero(id) {
   return true;
 }
 
+// ============================================
+// CONFIGURACIÓN DE PROVEEDORES MULTI-IA
+// ============================================
+
+const DEFAULT_PROVIDER_CONFIG = {
+  llm: {
+    default: 'gemini',
+    fallback: ['groq', 'anthropic'],
+    perChannel: {
+      web: 'gemini',
+      whatsapp: 'gemini',
+      telegram: 'gemini',
+      voice: 'groq'
+    },
+    models: {
+      gemini: 'gemini-1.5-flash',
+      anthropic: 'claude-3-5-sonnet-20241022',
+      openai: 'gpt-4o-mini',
+      groq: 'llama-3.3-70b-versatile',
+      glm5: 'glm-4-flash'
+    }
+  },
+  tts: {
+    default: 'deepgram',
+    fallback: ['amazon-polly'],
+    voices: {
+      deepgram: 'aura-2-selena-es',
+      elevenlabs: 'pMsXgVXv3BLzUgSXRplE',
+      openai: 'nova',
+      'amazon-polly': 'Polly.Mia'
+    }
+  },
+  stt: {
+    default: 'deepgram',
+    models: {
+      deepgram: 'nova-3',
+      whisper: 'whisper-1'
+    }
+  },
+  channels: {
+    web: { enabled: true, llm: 'gemini' },
+    whatsapp: { enabled: true, llm: 'gemini' },
+    telegram: { enabled: true, llm: 'gemini' },
+    voice: { enabled: true, llm: 'groq', tts: 'deepgram', stt: 'deepgram' }
+  }
+};
+
+/**
+ * Obtener configuración de proveedores
+ */
+export function obtenerProviderConfig() {
+  const settings = cargarSettings();
+  return {
+    llm: { ...DEFAULT_PROVIDER_CONFIG.llm, ...settings.providers?.llm },
+    tts: { ...DEFAULT_PROVIDER_CONFIG.tts, ...settings.providers?.tts },
+    stt: { ...DEFAULT_PROVIDER_CONFIG.stt, ...settings.providers?.stt },
+    channels: { ...DEFAULT_PROVIDER_CONFIG.channels, ...settings.providers?.channels }
+  };
+}
+
+/**
+ * Guardar configuración de proveedores
+ */
+export function guardarProviderConfig(config) {
+  const settings = cargarSettings();
+  settings.providers = {
+    llm: config.llm || settings.providers?.llm || DEFAULT_PROVIDER_CONFIG.llm,
+    tts: config.tts || settings.providers?.tts || DEFAULT_PROVIDER_CONFIG.tts,
+    stt: config.stt || settings.providers?.stt || DEFAULT_PROVIDER_CONFIG.stt,
+    channels: config.channels || settings.providers?.channels || DEFAULT_PROVIDER_CONFIG.channels
+  };
+  return guardarSettings(settings);
+}
+
+/**
+ * Actualizar proveedor LLM por defecto
+ */
+export function setDefaultLLMProvider(providerId) {
+  const settings = cargarSettings();
+  if (!settings.providers) settings.providers = { ...DEFAULT_PROVIDER_CONFIG };
+  if (!settings.providers.llm) settings.providers.llm = { ...DEFAULT_PROVIDER_CONFIG.llm };
+  settings.providers.llm.default = providerId;
+  return guardarSettings(settings);
+}
+
+/**
+ * Actualizar proveedor LLM por canal
+ */
+export function setChannelLLMProvider(channel, providerId) {
+  const settings = cargarSettings();
+  if (!settings.providers) settings.providers = { ...DEFAULT_PROVIDER_CONFIG };
+  if (!settings.providers.llm) settings.providers.llm = { ...DEFAULT_PROVIDER_CONFIG.llm };
+  if (!settings.providers.llm.perChannel) settings.providers.llm.perChannel = {};
+  settings.providers.llm.perChannel[channel] = providerId;
+  return guardarSettings(settings);
+}
+
+/**
+ * Actualizar proveedor TTS por defecto
+ */
+export function setDefaultTTSProvider(providerId) {
+  const settings = cargarSettings();
+  if (!settings.providers) settings.providers = { ...DEFAULT_PROVIDER_CONFIG };
+  if (!settings.providers.tts) settings.providers.tts = { ...DEFAULT_PROVIDER_CONFIG.tts };
+  settings.providers.tts.default = providerId;
+  return guardarSettings(settings);
+}
+
+/**
+ * Actualizar voz de un proveedor TTS
+ */
+export function setTTSVoice(providerId, voiceId) {
+  const settings = cargarSettings();
+  if (!settings.providers) settings.providers = { ...DEFAULT_PROVIDER_CONFIG };
+  if (!settings.providers.tts) settings.providers.tts = { ...DEFAULT_PROVIDER_CONFIG.tts };
+  if (!settings.providers.tts.voices) settings.providers.tts.voices = {};
+  settings.providers.tts.voices[providerId] = voiceId;
+  return guardarSettings(settings);
+}
+
+/**
+ * Actualizar modelo de un proveedor LLM
+ */
+export function setLLMModel(providerId, modelId) {
+  const settings = cargarSettings();
+  if (!settings.providers) settings.providers = { ...DEFAULT_PROVIDER_CONFIG };
+  if (!settings.providers.llm) settings.providers.llm = { ...DEFAULT_PROVIDER_CONFIG.llm };
+  if (!settings.providers.llm.models) settings.providers.llm.models = {};
+  settings.providers.llm.models[providerId] = modelId;
+  return guardarSettings(settings);
+}
+
+/**
+ * Obtener configuración completa para el dashboard (con estado de proveedores)
+ */
+export function obtenerDashboardConfig() {
+  const providers = obtenerProviderConfig();
+  const estado = obtenerEstadoServicios();
+  const keys = obtenerApiKeys();
+
+  return {
+    providers,
+    status: {
+      llm: {
+        gemini: !!keys.gemini,
+        anthropic: !!keys.anthropic,
+        openai: !!keys.openai,
+        groq: !!keys.groq,
+        glm5: !!keys.glm5
+      },
+      tts: {
+        deepgram: !!keys.deepgram,
+        elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+        openai: !!keys.openai,
+        'amazon-polly': true // Via Twilio
+      },
+      stt: {
+        deepgram: !!keys.deepgram,
+        whisper: !!keys.openai,
+        google: !!keys.gemini
+      },
+      channels: estado
+    }
+  };
+}
+
 // Cargar al iniciar
 cargarSettings();
 
@@ -327,5 +493,14 @@ export default {
   obtenerNumeroPorTipo,
   agregarNumero,
   actualizarNumero,
-  eliminarNumero
+  eliminarNumero,
+  // Nuevas funciones de proveedores
+  obtenerProviderConfig,
+  guardarProviderConfig,
+  setDefaultLLMProvider,
+  setChannelLLMProvider,
+  setDefaultTTSProvider,
+  setTTSVoice,
+  setLLMModel,
+  obtenerDashboardConfig
 };
