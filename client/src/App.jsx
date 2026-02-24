@@ -2209,10 +2209,10 @@ function App() {
                     <label>Nombre del Agente</label>
                     <input
                       type="text"
-                      value={trainingData.configuracion.nombreAgente}
+                      value={trainingData.configuracion?.nombreAgente || ''}
                       onChange={(e) => setTrainingData(prev => ({
                         ...prev,
-                        configuracion: { ...prev.configuracion, nombreAgente: e.target.value }
+                        configuracion: { ...(prev.configuracion || {}), nombreAgente: e.target.value }
                       }))}
                     />
                   </div>
@@ -2220,10 +2220,10 @@ function App() {
                   <div className="form-group">
                     <label>Saludo Inicial</label>
                     <textarea
-                      value={trainingData.configuracion.saludoInicial}
+                      value={trainingData.configuracion?.saludoInicial || ''}
                       onChange={(e) => setTrainingData(prev => ({
                         ...prev,
-                        configuracion: { ...prev.configuracion, saludoInicial: e.target.value }
+                        configuracion: { ...(prev.configuracion || {}), saludoInicial: e.target.value }
                       }))}
                       rows="2"
                     />
@@ -2232,10 +2232,10 @@ function App() {
                   <div className="form-group">
                     <label>Despedida</label>
                     <textarea
-                      value={trainingData.configuracion.despedida}
+                      value={trainingData.configuracion?.despedida || ''}
                       onChange={(e) => setTrainingData(prev => ({
                         ...prev,
-                        configuracion: { ...prev.configuracion, despedida: e.target.value }
+                        configuracion: { ...(prev.configuracion || {}), despedida: e.target.value }
                       }))}
                       rows="2"
                     />
@@ -2245,10 +2245,10 @@ function App() {
                     <div className="form-group">
                       <label>Tono de Comunicacion</label>
                       <select
-                        value={trainingData.configuracion.tono}
+                        value={trainingData.configuracion?.tono || 'profesional'}
                         onChange={(e) => setTrainingData(prev => ({
                           ...prev,
-                          configuracion: { ...prev.configuracion, tono: e.target.value }
+                          configuracion: { ...(prev.configuracion || {}), tono: e.target.value }
                         }))}
                       >
                         <option value="profesional">Profesional</option>
@@ -2261,10 +2261,10 @@ function App() {
                       <label>Max Caracteres por Respuesta</label>
                       <input
                         type="number"
-                        value={trainingData.configuracion.maxRespuesta}
+                        value={trainingData.configuracion?.maxRespuesta || 500}
                         onChange={(e) => setTrainingData(prev => ({
                           ...prev,
-                          configuracion: { ...prev.configuracion, maxRespuesta: parseInt(e.target.value) }
+                          configuracion: { ...(prev.configuracion || {}), maxRespuesta: parseInt(e.target.value) }
                         }))}
                       />
                     </div>
@@ -2274,10 +2274,10 @@ function App() {
                     <label>
                       <input
                         type="checkbox"
-                        checked={trainingData.configuracion.usarEmojis}
+                        checked={trainingData.configuracion?.usarEmojis ?? true}
                         onChange={(e) => setTrainingData(prev => ({
                           ...prev,
-                          configuracion: { ...prev.configuracion, usarEmojis: e.target.checked }
+                          configuracion: { ...(prev.configuracion || {}), usarEmojis: e.target.checked }
                         }))}
                       />
                       Usar emojis en respuestas
@@ -2290,7 +2290,7 @@ function App() {
                       await fetch('/api/training/configuracion', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(trainingData.configuracion)
+                        body: JSON.stringify(trainingData.configuracion || {})
                       })
                       setTrainingMsg('Configuracion guardada')
                       setTimeout(() => setTrainingMsg(''), 3000)
