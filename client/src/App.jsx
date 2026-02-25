@@ -1562,25 +1562,8 @@ function App() {
                     <span className="channel-icon">🌐</span>
                     <span className="channel-name">Web/Chat</span>
                     <select
-                      value={settingsData.llm?.provider || 'gemini'}
-                      onChange={async (e) => {
-                        const provider = e.target.value;
-                        setSettingsData(prev => ({
-                          ...prev,
-                          llm: { ...prev.llm, provider }
-                        }));
-                        try {
-                          await fetch('/api/providers/llm/default', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ provider })
-                          });
-                          setSettingsMsg(`Proveedor cambiado a ${provider.toUpperCase()}`);
-                          setTimeout(() => setSettingsMsg(''), 3000);
-                        } catch (err) {
-                          console.error('Error guardando proveedor:', err);
-                        }
-                      }}
+                      data-channel="web"
+                      defaultValue={settingsData.llm?.provider || 'gemini'}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1594,25 +1577,8 @@ function App() {
                     <span className="channel-icon">📱</span>
                     <span className="channel-name">WhatsApp</span>
                     <select
-                      value={settingsData.llm?.provider || 'gemini'}
-                      onChange={async (e) => {
-                        const provider = e.target.value;
-                        setSettingsData(prev => ({
-                          ...prev,
-                          llm: { ...prev.llm, provider }
-                        }));
-                        try {
-                          await fetch('/api/providers/llm/channel', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ channel: 'whatsapp', provider })
-                          });
-                          setSettingsMsg(`WhatsApp cambiado a ${provider.toUpperCase()}`);
-                          setTimeout(() => setSettingsMsg(''), 3000);
-                        } catch (err) {
-                          console.error('Error guardando proveedor:', err);
-                        }
-                      }}
+                      data-channel="whatsapp"
+                      defaultValue={settingsData.llm?.provider || 'gemini'}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1626,25 +1592,8 @@ function App() {
                     <span className="channel-icon">✈️</span>
                     <span className="channel-name">Telegram</span>
                     <select
-                      value={settingsData.llm?.provider || 'gemini'}
-                      onChange={async (e) => {
-                        const provider = e.target.value;
-                        setSettingsData(prev => ({
-                          ...prev,
-                          llm: { ...prev.llm, provider }
-                        }));
-                        try {
-                          await fetch('/api/providers/llm/channel', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ channel: 'telegram', provider })
-                          });
-                          setSettingsMsg(`Telegram cambiado a ${provider.toUpperCase()}`);
-                          setTimeout(() => setSettingsMsg(''), 3000);
-                        } catch (err) {
-                          console.error('Error guardando proveedor:', err);
-                        }
-                      }}
+                      data-channel="telegram"
+                      defaultValue={settingsData.llm?.provider || 'gemini'}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1658,21 +1607,8 @@ function App() {
                     <span className="channel-icon">📞</span>
                     <span className="channel-name">Llamadas</span>
                     <select
-                      value="groq"
-                      onChange={async (e) => {
-                        const provider = e.target.value;
-                        try {
-                          await fetch('/api/providers/llm/channel', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ channel: 'voice', provider })
-                          });
-                          setSettingsMsg(`Llamadas cambiado a ${provider.toUpperCase()}`);
-                          setTimeout(() => setSettingsMsg(''), 3000);
-                        } catch (err) {
-                          console.error('Error guardando proveedor:', err);
-                        }
-                      }}
+                      data-channel="voice"
+                      defaultValue="groq"
                       className="channel-select"
                     >
                       <option value="groq">Groq (Recomendado)</option>
@@ -1680,21 +1616,8 @@ function App() {
                       <option value="anthropic">Claude</option>
                     </select>
                     <select
-                      value={settingsData.voz?.speakModel?.includes('aura') ? 'deepgram' : 'polly'}
-                      onChange={async (e) => {
-                        const ttsProvider = e.target.value;
-                        try {
-                          await fetch('/api/providers/tts/default', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ provider: ttsProvider })
-                          });
-                          setSettingsMsg(`TTS cambiado a ${ttsProvider.toUpperCase()}`);
-                          setTimeout(() => setSettingsMsg(''), 3000);
-                        } catch (err) {
-                          console.error('Error guardando TTS:', err);
-                        }
-                      }}
+                      data-channel="tts"
+                      defaultValue={settingsData.voz?.speakModel?.includes('aura') ? 'deepgram' : 'amazon-polly'}
                       className="channel-select"
                     >
                       <option value="deepgram">Deepgram TTS</option>
@@ -1706,19 +1629,50 @@ function App() {
                   <button
                     onClick={async () => {
                       try {
-                        const provider = settingsData.llm?.provider || 'gemini';
-                        await fetch('/api/providers/llm/default', {
+                        setSettingsMsg('Guardando configuracion...');
+
+                        // Obtener valores de los selectores
+                        const webProvider = document.querySelector('[data-channel="web"]')?.value || settingsData.llm?.provider || 'gemini';
+                        const whatsappProvider = document.querySelector('[data-channel="whatsapp"]')?.value || settingsData.llm?.provider || 'gemini';
+                        const telegramProvider = document.querySelector('[data-channel="telegram"]')?.value || settingsData.llm?.provider || 'gemini';
+                        const voiceProvider = document.querySelector('[data-channel="voice"]')?.value || 'groq';
+                        const ttsProvider = document.querySelector('[data-channel="tts"]')?.value || 'deepgram';
+
+                        // Guardar configuracion completa de proveedores
+                        const config = {
+                          llm: {
+                            default: webProvider,
+                            fallback: ['groq', 'anthropic'],
+                            perChannel: {
+                              web: webProvider,
+                              whatsapp: whatsappProvider,
+                              telegram: telegramProvider,
+                              voice: voiceProvider
+                            }
+                          },
+                          tts: {
+                            default: ttsProvider
+                          }
+                        };
+
+                        await fetch('/api/providers/config', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ provider })
+                          body: JSON.stringify(config)
                         });
+
+                        // Tambien guardar en settings/llm para compatibilidad
                         await fetch('/api/settings/llm', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ provider, temperature: settingsData.llm?.temperature || 0.7 })
+                          body: JSON.stringify({
+                            provider: webProvider,
+                            temperature: settingsData.llm?.temperature || 0.7
+                          })
                         });
-                        setSettingsMsg(`Configuracion guardada - Proveedor: ${provider.toUpperCase()}`);
-                        setTimeout(() => setSettingsMsg(''), 4000);
+
+                        setSettingsMsg(`Configuracion guardada: Web=${webProvider}, WhatsApp=${whatsappProvider}, Telegram=${telegramProvider}, Llamadas=${voiceProvider}, TTS=${ttsProvider}`);
+                        setTimeout(() => setSettingsMsg(''), 5000);
                       } catch (err) {
                         setSettingsMsg('Error guardando configuracion');
                         console.error(err);
@@ -1726,7 +1680,7 @@ function App() {
                     }}
                     className="primary"
                   >
-                    Guardar Configuracion de Proveedores
+                    Guardar TODA la Configuracion de Proveedores
                   </button>
                 </div>
               </div>
