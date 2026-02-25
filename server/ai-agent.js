@@ -234,6 +234,24 @@ export async function procesarConIA(mensaje, contexto = {}) {
   let datosUsuario = sesion.datos || {};
   let pasoActual = sesion.paso || 'inicio';
 
+  // === COMANDO ESPECIAL: Preguntar qué modelo está respondiendo ===
+  const preguntaModelo = /\b(qu[eé]\s*(modelo|ia|inteligencia|llm)|qui[eé]n\s*(eres|responde)|eres\s*(gpt|gemini|claude|groq))\b/i;
+  if (preguntaModelo.test(mensaje)) {
+    const providerConfig = settings.obtenerProviderConfig();
+    const llmDefault = providerConfig?.llm?.default || 'gemini';
+    const llmCanal = providerConfig?.llm?.channels?.[canal] || llmDefault;
+
+    return {
+      respuesta: `🤖 **Información del Sistema**\n\n` +
+        `- Proveedor LLM actual: **${llmCanal.toUpperCase()}**\n` +
+        `- Canal: ${canal}\n` +
+        `- Proveedor por defecto: ${llmDefault}\n\n` +
+        `Puedes cambiar el proveedor en la pestaña "Config" del dashboard.`,
+      datos: datosUsuario,
+      paso: pasoActual
+    };
+  }
+
   // === PRE-PROCESAMIENTO: Detectar año en mensaje ===
   const anoDetectado = detectarAnoEnMensaje(mensaje);
   if (anoDetectado && !datosUsuario.anoInicioCotizacion) {
