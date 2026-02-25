@@ -106,7 +106,15 @@ function App() {
     voz: { speakModel: 'aura-2-selena-es', listenModel: 'nova-3', listenLanguage: 'es' },
     llm: { provider: 'gemini', temperature: 0.7 },
     numeros: [],
-    imss: { año: 2025, uma: {}, salarioMinimo: {} }
+    imss: { año: 2025, uma: {}, salarioMinimo: {} },
+    // Configuracion de proveedores por canal
+    providers: {
+      web: 'gemini',
+      whatsapp: 'gemini',
+      telegram: 'gemini',
+      voice: 'groq',
+      tts: 'deepgram'
+    }
   })
   const [serviciosStatus, setServiciosStatus] = useState({ twilio: false, telegram: false, deepgram: false, llmConfigurado: false })
   const [nuevoNumero, setNuevoNumero] = useState({ nombre: '', numero: '', tipo: 'voz' })
@@ -247,15 +255,36 @@ function App() {
 
   const cargarSettings = async () => {
     try {
+      // Cargar settings generales
       const res = await fetch('/api/settings')
       const data = await res.json()
+
+      // Cargar configuracion de proveedores
+      let providers = { web: 'gemini', whatsapp: 'gemini', telegram: 'gemini', voice: 'groq', tts: 'deepgram' }
+      try {
+        const provRes = await fetch('/api/providers/config')
+        const provData = await provRes.json()
+        if (provData.llm?.perChannel) {
+          providers = {
+            web: provData.llm.perChannel.web || provData.llm.default || 'gemini',
+            whatsapp: provData.llm.perChannel.whatsapp || provData.llm.default || 'gemini',
+            telegram: provData.llm.perChannel.telegram || provData.llm.default || 'gemini',
+            voice: provData.llm.perChannel.voice || 'groq',
+            tts: provData.tts?.default || 'deepgram'
+          }
+        }
+      } catch (e) {
+        console.log('Usando proveedores por defecto')
+      }
+
       // Merge defensivo para evitar propiedades undefined
       setSettingsData(prev => ({
         servicios: data.servicios || prev.servicios || {},
         voz: data.voz || prev.voz || {},
         llm: data.llm || prev.llm || {},
         numeros: data.numeros || prev.numeros || [],
-        imss: data.imss || prev.imss || {}
+        imss: data.imss || prev.imss || {},
+        providers
       }))
       setServiciosStatus(data.servicios || {})
     } catch (err) {
@@ -1563,7 +1592,11 @@ function App() {
                     <span className="channel-name">Web/Chat</span>
                     <select
                       data-channel="web"
-                      defaultValue={settingsData.llm?.provider || 'gemini'}
+                      value={settingsData.providers?.web || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        providers: { ...prev.providers, web: e.target.value }
+                      }))}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1578,7 +1611,11 @@ function App() {
                     <span className="channel-name">WhatsApp</span>
                     <select
                       data-channel="whatsapp"
-                      defaultValue={settingsData.llm?.provider || 'gemini'}
+                      value={settingsData.providers?.whatsapp || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        providers: { ...prev.providers, whatsapp: e.target.value }
+                      }))}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1593,7 +1630,11 @@ function App() {
                     <span className="channel-name">Telegram</span>
                     <select
                       data-channel="telegram"
-                      defaultValue={settingsData.llm?.provider || 'gemini'}
+                      value={settingsData.providers?.telegram || 'gemini'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        providers: { ...prev.providers, telegram: e.target.value }
+                      }))}
                       className="channel-select"
                     >
                       <option value="gemini">Gemini</option>
@@ -1608,7 +1649,11 @@ function App() {
                     <span className="channel-name">Llamadas</span>
                     <select
                       data-channel="voice"
-                      defaultValue="groq"
+                      value={settingsData.providers?.voice || 'groq'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        providers: { ...prev.providers, voice: e.target.value }
+                      }))}
                       className="channel-select"
                     >
                       <option value="groq">Groq (Recomendado)</option>
@@ -1617,7 +1662,11 @@ function App() {
                     </select>
                     <select
                       data-channel="tts"
-                      defaultValue={settingsData.voz?.speakModel?.includes('aura') ? 'deepgram' : 'amazon-polly'}
+                      value={settingsData.providers?.tts || 'deepgram'}
+                      onChange={(e) => setSettingsData(prev => ({
+                        ...prev,
+                        providers: { ...prev.providers, tts: e.target.value }
+                      }))}
                       className="channel-select"
                     >
                       <option value="deepgram">Deepgram TTS</option>
@@ -1631,12 +1680,12 @@ function App() {
                       try {
                         setSettingsMsg('Guardando configuracion...');
 
-                        // Obtener valores de los selectores
-                        const webProvider = document.querySelector('[data-channel="web"]')?.value || settingsData.llm?.provider || 'gemini';
-                        const whatsappProvider = document.querySelector('[data-channel="whatsapp"]')?.value || settingsData.llm?.provider || 'gemini';
-                        const telegramProvider = document.querySelector('[data-channel="telegram"]')?.value || settingsData.llm?.provider || 'gemini';
-                        const voiceProvider = document.querySelector('[data-channel="voice"]')?.value || 'groq';
-                        const ttsProvider = document.querySelector('[data-channel="tts"]')?.value || 'deepgram';
+                        // Usar valores del estado React (ya no del DOM)
+                        const webProvider = settingsData.providers?.web || 'gemini';
+                        const whatsappProvider = settingsData.providers?.whatsapp || 'gemini';
+                        const telegramProvider = settingsData.providers?.telegram || 'gemini';
+                        const voiceProvider = settingsData.providers?.voice || 'groq';
+                        const ttsProvider = settingsData.providers?.tts || 'deepgram';
 
                         // Guardar configuracion completa de proveedores
                         const config = {
