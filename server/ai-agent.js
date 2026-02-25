@@ -194,14 +194,66 @@ async function llamarGroq(mensajes, opciones) {
   return data.choices[0].message.content;
 }
 
+// Detectar año en mensaje del usuario (ej: "en 1990", "1985", "desde el 95")
+function detectarAnoEnMensaje(mensaje) {
+  // Patrones para detectar años
+  const patronesAno = [
+    /\b(19[5-9]\d|20[0-2]\d)\b/,  // Años completos: 1950-2029
+    /\ben\s+(?:el\s+)?(\d{2})\b/i,  // "en el 90", "en 85"
+    /\bdesde\s+(?:el\s+)?(\d{2})\b/i,  // "desde el 90"
+    /\bdel\s+(\d{2})\b/i,  // "del 90"
+  ];
+
+  for (const patron of patronesAno) {
+    const match = mensaje.match(patron);
+    if (match) {
+      let ano = parseInt(match[1]);
+      // Si es año de 2 dígitos, convertir a 4 dígitos
+      if (ano < 100) {
+        ano = ano > 30 ? 1900 + ano : 2000 + ano;  // 90 -> 1990, 05 -> 2005
+      }
+      // Validar rango razonable para cotización IMSS
+      if (ano >= 1950 && ano <= new Date().getFullYear()) {
+        return {
+          ano,
+          ley: ano < 1997 ? '73' : '97',
+          tieneHistorial: true
+        };
+      }
+    }
+  }
+  return null;
+}
+
 // Procesar mensaje con IA
 export async function procesarConIA(mensaje, contexto = {}) {
   const { canal, sesion = {}, telefono, chatId, callSid } = contexto;
 
   // Construir historial de conversación
   const historial = sesion.historial || [];
-  const datosUsuario = sesion.datos || {};
-  const pasoActual = sesion.paso || 'inicio';
+  let datosUsuario = sesion.datos || {};
+  let pasoActual = sesion.paso || 'inicio';
+
+  // === PRE-PROCESAMIENTO: Detectar año en mensaje ===
+  const anoDetectado = detectarAnoEnMensaje(mensaje);
+  if (anoDetectado && !datosUsuario.anoInicioCotizacion) {
+    console.log(`📅 Año detectado automáticamente: ${anoDetectado.ano} (Ley ${anoDetectado.ley})`);
+    datosUsuario = {
+      ...datosUsuario,
+      anoInicioCotizacion: anoDetectado.ano,
+      ley: anoDetectado.ley,
+      tieneHistorial: true
+    };
+    // Avanzar al siguiente paso del flujo
+    if (pasoActual === 'inicio' || pasoActual === 'identificar_regimen') {
+      pasoActual = 'semanas_cotizadas';
+    }
+    // Guardar en sesión
+    if (sesion) {
+      sesion.datos = datosUsuario;
+      sesion.paso = pasoActual;
+    }
+  }
 
   // Obtener datos de referencia actuales
   const datosReferencia = db.obtenerResumenDatos();
@@ -231,9 +283,22 @@ ${feedbackPatrones.evitar.slice(0, 2).map(p =>
 `;
   }
 
+  // Generar advertencia si ya tenemos el año
+  let advertenciaAno = '';
+  if (datosUsuario.anoInicioCotizacion) {
+    advertenciaAno = `
+⚠️ **IMPORTANTE - YA SABEMOS QUE EL USUARIO TIENE HISTORIAL:**
+- Año de inicio: ${datosUsuario.anoInicioCotizacion}
+- Ley aplicable: Ley ${datosUsuario.ley}
+- EL USUARIO SÍ TIENE COTIZACIONES. NO preguntar si ha cotizado.
+- NO preguntar de nuevo el año. Avanzar al siguiente paso.
+- Siguiente pregunta: "¿Cuántas semanas cotizadas tienes?"
+`;
+  }
+
   // System prompt enriquecido
   const systemPrompt = `${SYSTEM_PROMPT_IMSS}
-
+${advertenciaAno}
 DATOS DE REFERENCIA ACTUALIZADOS:
 - UMA 2025: $${datosReferencia.uma.diario} diarios
 - Salario Mínimo: $${datosReferencia.salarioMinimo.general} (centro), $${datosReferencia.salarioMinimo.frontera} (frontera)
