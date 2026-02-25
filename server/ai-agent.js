@@ -291,13 +291,13 @@ export async function procesarConIA(mensaje, contexto = {}) {
 APRENDIZAJE DE RESPUESTAS ANTERIORES:
 Las siguientes respuestas fueron calificadas positivamente por usuarios:
 ${feedbackPatrones.buenos.slice(0, 3).map(p =>
-  `- Contexto: ${p.contexto} | Modalidad: ${p.modalidad || 'general'}`
-).join('\n')}
+      `- Contexto: ${p.contexto} | Modalidad: ${p.modalidad || 'general'}`
+    ).join('\n')}
 
 Patrones a EVITAR (respuestas mal calificadas):
 ${feedbackPatrones.evitar.slice(0, 2).map(p =>
-  `- Contexto: ${p.contexto} | Problema: ${p.problema}`
-).join('\n') || 'Ninguno registrado aún'}
+      `- Contexto: ${p.contexto} | Problema: ${p.problema}`
+    ).join('\n') || 'Ninguno registrado aún'}
 `;
   }
 
@@ -331,7 +331,13 @@ ${seccionFeedback}
 ${generarPromptEntrenamiento()}
 
 INSTRUCCIONES ESPECIALES SEGÚN CANAL:
-${canal === 'telefono' ? '- Respuestas cortas y claras para voz. Máximo 2-3 oraciones.' : ''}
+${canal === 'telefono' ? `
+- Estás en una LLAMADA TELEFÓNICA. Sé breve y directo.
+- NO uses markdown (negritas, listas, asteriscos), la voz no puede leerlos.
+- Usa frases cortas para que el usuario pueda interrumpirte (barge-in).
+- Formatea cantidades de dinero así: "diez mil quinientos pesos" o "$10,500".
+- NO des respuestas de más de 3 oraciones.
+- Si el usuario dice algo que no entiendes, pide aclaración amablemente.` : ''}
 ${canal === 'whatsapp' ? '- Puedes usar emojis. Divide información larga en mensajes cortos.' : ''}
 ${canal === 'telegram' ? '- Puedes usar markdown (*negrita*, _cursiva_). Sugiere botones cuando sea apropiado.' : ''}
 ${canal === 'web' ? '- Puedes dar respuestas más detalladas con formato.' : ''}
@@ -465,21 +471,21 @@ function detectarModalidad(mensaje, datosUsuario) {
   const msgLower = mensaje.toLowerCase();
 
   if (msgLower.includes('modalidad 33') || msgLower.includes('mod 33') ||
-      msgLower.includes('seguro de salud') || msgLower.includes('seguro familiar') ||
-      msgLower.includes('solo médico') || msgLower.includes('cobertura médica')) {
+    msgLower.includes('seguro de salud') || msgLower.includes('seguro familiar') ||
+    msgLower.includes('solo médico') || msgLower.includes('cobertura médica')) {
     return 'mod33';
   }
 
   if (msgLower.includes('modalidad 10') || msgLower.includes('mod 10') ||
-      msgLower.includes('independiente') || msgLower.includes('freelance') ||
-      msgLower.includes('cuotas patronales')) {
+    msgLower.includes('independiente') || msgLower.includes('freelance') ||
+    msgLower.includes('cuotas patronales')) {
     return 'mod10';
   }
 
   // Por defecto, si tiene datos de pensión, es Mod 40
   if (datosUsuario.semanasActuales || datosUsuario.fechaNacimiento ||
-      msgLower.includes('pensión') || msgLower.includes('modalidad 40') ||
-      msgLower.includes('mod 40') || msgLower.includes('jubilación')) {
+    msgLower.includes('pensión') || msgLower.includes('modalidad 40') ||
+    msgLower.includes('mod 40') || msgLower.includes('jubilación')) {
     return 'mod40';
   }
 
@@ -489,35 +495,6 @@ function detectarModalidad(mensaje, datosUsuario) {
 // Extraer salario del mensaje del usuario
 function extraerSalarioDelMensaje(mensaje) {
   const msgLower = mensaje.toLowerCase().trim();
-
-  // Mapeo de palabras numéricas en español
-  const palabrasANumeros = {
-    'mil': 1000,
-    'un mil': 1000,
-    'dos mil': 2000,
-    'tres mil': 3000,
-    'cuatro mil': 4000,
-    'cinco mil': 5000,
-    'seis mil': 6000,
-    'siete mil': 7000,
-    'ocho mil': 8000,
-    'nueve mil': 9000,
-    'diez mil': 10000,
-    'once mil': 11000,
-    'doce mil': 12000,
-    'trece mil': 13000,
-    'catorce mil': 14000,
-    'quince mil': 15000,
-    'dieciseis mil': 16000,
-    'diecisiete mil': 17000,
-    'dieciocho mil': 18000,
-    'diecinueve mil': 19000,
-    'veinte mil': 20000,
-    'veinticinco mil': 25000,
-    'treinta mil': 30000,
-    'cuarenta mil': 40000,
-    'cincuenta mil': 50000
-  };
 
   // Buscar patrones de palabras numéricas
   for (const [palabra, valor] of Object.entries(palabrasANumeros)) {
@@ -546,8 +523,8 @@ function formatearResultadoCalculo(resultado, canal, modalidad = 'mod40') {
   if (modalidad === 'mod40') {
     if (canal === 'telefono') {
       return `\n\nImportante: La Modalidad 40 no incluye servicio médico. ` +
-        `Tu cuota mensual sería de ${resultado.cuotas.cuotaMensual} pesos. ` +
-        `Tu pensión estimada es de ${resultado.pension.mensualEstimada} pesos mensuales. ` +
+        `Tu cuota mensual sería de ${formatearMonedaParaVoz(resultado.cuotas.cuotaMensual)}. ` +
+        `Tu pensión estimada es de ${formatearMonedaParaVoz(resultado.pension.mensualEstimada)} mensuales. ` +
         `Si necesitas atención médica, considera la Modalidad 10.`;
     }
 
@@ -592,8 +569,8 @@ No podrás atenderte en clínicas IMSS con esta modalidad.
   // Modalidad 10
   if (modalidad === 'mod10') {
     if (canal === 'telefono') {
-      return `\n\nTu cuota total mensual sería de ${resultado.totales.mensualSinInfonavit} pesos. ` +
-        `Esto incluye ${resultado.totales.patron} como patrón y ${resultado.totales.obrero} como trabajador.`;
+      return `\n\nTu cuota total mensual sería de ${formatearMonedaParaVoz(resultado.totales.mensualSinInfonavit)}. ` +
+        `Esto incluye ${formatearMonedaParaVoz(resultado.totales.patron)} como patrón y ${formatearMonedaParaVoz(resultado.totales.obrero)} como trabajador.`;
     }
 
     if (canal === 'whatsapp' || canal === 'telegram') {
@@ -620,8 +597,8 @@ No podrás atenderte en clínicas IMSS con esta modalidad.
   // Modalidad 33
   if (modalidad === 'mod33') {
     if (canal === 'telefono') {
-      return `\n\nEl costo anual del seguro de salud familiar sería de ${resultado.totales.cuotaAnualFamilia} pesos. ` +
-        `El primer año incluye inscripción por ${resultado.cuotaInscripcion.monto} pesos adicionales.`;
+      return `\n\nEl costo anual del seguro de salud familiar sería de ${formatearMonedaParaVoz(resultado.totales.cuotaAnualFamilia)}. ` +
+        `El primer año incluye inscripción por ${formatearMonedaParaVoz(resultado.cuotaInscripcion.monto)} adicionales.`;
     }
 
     if (canal === 'whatsapp' || canal === 'telegram') {

@@ -9,6 +9,7 @@ import { generarAudio } from './deepgram-tts.js';
 import { appendFileSync, existsSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import prospectos from '../crm/prospectos.js';
 
 // Cache de audio en memoria (para evitar regenerar el mismo audio)
 const audioCache = new Map();
@@ -191,11 +192,20 @@ export async function handleIncomingCall(req, res) {
     const { Called, Caller, CallSid } = req.body || {};
     console.log(`📞 [VOICE] Llamada entrante: ${Caller} -> ${Called}, SID: ${CallSid}`);
 
-    // Inicializar sesión de voz con historial vacío
+    // Recuperar datos si ya existe prospecto
+    const prospectosExistentes = prospectos.buscarProspecto(Caller || '');
+    const prospecto = prospectosExistentes.length > 0 ? prospectosExistentes[0] : null;
+
+    // Inicializar sesión de voz con datos de CRM si existen
     voiceSessions.set(CallSid, {
       historial: [],
       lastSeen: Date.now(),
-      caller: Caller
+      caller: Caller,
+      datos: prospecto ? {
+        nombreCompleto: prospecto.nombreCompleto,
+        semanasActuales: prospecto.semanasActuales,
+        nss: prospecto.nss
+      } : {}
     });
 
     // Generar TwiML directamente
@@ -304,9 +314,16 @@ export async function handleVoiceInput(req, res, procesarConIA) {
       canal: 'telefono',
       callSid,
       sesion: {
-        historial: session.historial
+        historial: session.historial,
+        datos: session.datos || {}
       }
     });
+
+    // Sincronizar con CRM si hay nuevos datos
+    if (respuestaIA.nuevosDatos) {
+      session.datos = { ...(session.datos || {}), ...respuestaIA.nuevosDatos };
+      actualizarProspectoDesdeVoz(session.caller, session.datos);
+    }
 
     // Actualizar historial en la sesión
     session.historial.push({ rol: 'usuario', mensaje: speechResult });
@@ -345,36 +362,27 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     if (tieneDeepgram()) {
       // Generar audios con Deepgram
       const audioIdResp = `resp_${callSid}_${Date.now()}`;
-      const audioIdMas = `mas_${callSid}`;
-      const audioIdBye = `bye2_${callSid}`;
-
-      await Promise.all([
-        generarAudioDeepgram(mensajeLimpio, audioIdResp),
-        generarAudioDeepgram('¿Hay algo más en lo que pueda ayudarte?', audioIdMas),
-        generarAudioDeepgram('Fue un placer ayudarte. Hasta luego.', audioIdBye)
-      ]);
+      await generarAudioDeepgram(mensajeLimpio, audioIdResp);
 
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Play>${baseUrl}/api/tts/${audioIdResp}</Play>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
+    <Play>${baseUrl}/api/tts/${audioIdResp}</Play>
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">¿Sigue ahí? ¿En qué más puedo ayudarle?</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
   </Gather>
-  <Play>${baseUrl}/api/tts/${audioIdMas}</Play>
-  <Gather input="speech" language="es-MX" speechTimeout="3" action="${actionUrl}" method="POST">
-  </Gather>
-  <Play>${baseUrl}/api/tts/${audioIdBye}</Play>
   <Hangup/>
 </Response>`;
     } else {
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-MX" voice="Polly.Mia">${mensajeLimpio}</Say>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
+    <Say language="es-MX" voice="Polly.Mia">${mensajeLimpio}</Say>
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">¿Sigue ahí? ¿En qué más puedo ayudarle?</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
   </Gather>
-  <Say language="es-MX" voice="Polly.Mia">¿Hay algo más en lo que pueda ayudarte?</Say>
-  <Gather input="speech" language="es-MX" speechTimeout="3" action="${actionUrl}" method="POST">
-  </Gather>
-  <Say language="es-MX" voice="Polly.Mia">Fue un placer ayudarte. Hasta luego.</Say>
   <Hangup/>
 </Response>`;
     }
@@ -440,9 +448,32 @@ export async function enviarSMS(numeroDestino, mensaje) {
   return message.sid;
 }
 
+// Helper para actualizar prospecto en el CRM
+function actualizarProspectoDesdeVoz(telefono, datos) {
+  if (!telefono) return;
+  try {
+    const existentes = prospectos.buscarProspecto(telefono);
+    if (existentes.length > 0) {
+      prospectos.actualizarProspecto(existentes[0].id, {
+        ...datos,
+        origen: 'telefono'
+      });
+      console.log(`✅ Prospecto actualizado desde voz: ${telefono}`);
+    } else if (datos.nombreCompleto) {
+      prospectos.crearProspecto({
+        ...datos,
+        telefonoUSA: telefono,
+        origen: 'telefono'
+      });
+      console.log(`✅ Nuevo prospecto creado desde voz: ${telefono}`);
+    }
+  } catch (err) {
+    console.error('⚠️ Error sincronizando con CRM desde voz:', err.message);
+  }
+}
+
 export default {
   initTwilio,
-  generarRespuestaVoz,
   handleIncomingCall,
   handleVoiceInput,
   hacerLlamada,
