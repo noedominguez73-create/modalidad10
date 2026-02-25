@@ -1702,8 +1702,32 @@ function App() {
                     </select>
                   </div>
                 </div>
-                <div className="provider-hint">
-                  Los cambios se guardan automaticamente al seleccionar
+                <div className="settings-actions" style={{marginTop: '15px'}}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const provider = settingsData.llm?.provider || 'gemini';
+                        await fetch('/api/providers/llm/default', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ provider })
+                        });
+                        await fetch('/api/settings/llm', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ provider, temperature: settingsData.llm?.temperature || 0.7 })
+                        });
+                        setSettingsMsg(`Configuracion guardada - Proveedor: ${provider.toUpperCase()}`);
+                        setTimeout(() => setSettingsMsg(''), 4000);
+                      } catch (err) {
+                        setSettingsMsg('Error guardando configuracion');
+                        console.error(err);
+                      }
+                    }}
+                    className="primary"
+                  >
+                    Guardar Configuracion de Proveedores
+                  </button>
                 </div>
               </div>
             </div>
