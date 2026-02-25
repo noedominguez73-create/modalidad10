@@ -854,7 +854,9 @@ app.get('/api/settings', (req, res) => {
       ...config.servicios,
       twilio: canalesActivos.twilio,
       whatsapp: canalesActivos.whatsapp,
-      telegram: canalesActivos.telegram
+      telegram: canalesActivos.telegram,
+      deepgram: canalesActivos.deepgram,
+      llmConfigurado: canalesActivos.llm
     };
 
     res.json(config);
