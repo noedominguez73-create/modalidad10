@@ -358,11 +358,26 @@ const DEFAULT_PROVIDER_CONFIG = {
  */
 export function obtenerProviderConfig() {
   const settings = cargarSettings();
+  const savedLlm = settings.providers?.llm || {};
+  const savedChannels = settings.providers?.channels || {};
+
+  // Construir perChannel desde channels si no existe
+  const perChannel = savedLlm.perChannel || {
+    web: savedChannels.web?.llm || DEFAULT_PROVIDER_CONFIG.channels.web.llm,
+    whatsapp: savedChannels.whatsapp?.llm || DEFAULT_PROVIDER_CONFIG.channels.whatsapp.llm,
+    telegram: savedChannels.telegram?.llm || DEFAULT_PROVIDER_CONFIG.channels.telegram.llm,
+    voice: savedChannels.voice?.llm || DEFAULT_PROVIDER_CONFIG.channels.voice.llm
+  };
+
   return {
-    llm: { ...DEFAULT_PROVIDER_CONFIG.llm, ...settings.providers?.llm },
+    llm: {
+      ...DEFAULT_PROVIDER_CONFIG.llm,
+      ...savedLlm,
+      perChannel  // Asegurar que perChannel siempre esté disponible
+    },
     tts: { ...DEFAULT_PROVIDER_CONFIG.tts, ...settings.providers?.tts },
     stt: { ...DEFAULT_PROVIDER_CONFIG.stt, ...settings.providers?.stt },
-    channels: { ...DEFAULT_PROVIDER_CONFIG.channels, ...settings.providers?.channels }
+    channels: { ...DEFAULT_PROVIDER_CONFIG.channels, ...savedChannels }
   };
 }
 
@@ -371,12 +386,35 @@ export function obtenerProviderConfig() {
  */
 export function guardarProviderConfig(config) {
   const settings = cargarSettings();
+
+  // Extraer perChannel del config.llm si existe
+  const perChannel = config.llm?.perChannel || {};
+
+  // Sincronizar channels con perChannel para compatibilidad
+  const channels = {
+    web: { enabled: true, llm: perChannel.web || config.llm?.default || 'gemini' },
+    whatsapp: { enabled: true, llm: perChannel.whatsapp || config.llm?.default || 'gemini' },
+    telegram: { enabled: true, llm: perChannel.telegram || config.llm?.default || 'gemini' },
+    voice: {
+      enabled: true,
+      llm: perChannel.voice || 'groq',
+      tts: config.tts?.default || 'deepgram',
+      stt: 'deepgram'
+    }
+  };
+
   settings.providers = {
-    llm: config.llm || settings.providers?.llm || DEFAULT_PROVIDER_CONFIG.llm,
+    llm: {
+      ...(settings.providers?.llm || DEFAULT_PROVIDER_CONFIG.llm),
+      ...(config.llm || {}),
+      perChannel  // Guardar perChannel explícitamente
+    },
     tts: config.tts || settings.providers?.tts || DEFAULT_PROVIDER_CONFIG.tts,
     stt: config.stt || settings.providers?.stt || DEFAULT_PROVIDER_CONFIG.stt,
-    channels: config.channels || settings.providers?.channels || DEFAULT_PROVIDER_CONFIG.channels
+    channels  // Guardar channels sincronizados
   };
+
+  console.log('💾 Guardando configuración de proveedores:', JSON.stringify(settings.providers, null, 2));
   return guardarSettings(settings);
 }
 
