@@ -550,7 +550,21 @@ initChannels().then(() => {
   console.error('💥 Error crítico inicializando canales:', err);
 });
 
+import twilioToken from './channels/twilio-token.js';
+
 // --- TWILIO VOICE (Llamadas telefónicas) ---
+
+// Endpoint para obtener Access Token (para el SDK del navegador)
+app.get('/api/twilio/token', (req, res) => {
+  try {
+    const identity = req.query.identity || 'asesor_' + Math.floor(Math.random() * 1000);
+    const tokenData = twilioToken.generarAccessToken(identity);
+    res.json({ success: true, ...tokenData });
+  } catch (error) {
+    console.error('❌ Error generando token Twilio:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Webhook: Llamada entrante
 app.post('/api/twilio/voice', (req, res) => {

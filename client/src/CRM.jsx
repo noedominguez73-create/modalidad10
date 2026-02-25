@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import TwilioPhone from './components/TwilioPhone'
 
 function CRM() {
   const [vista, setVista] = useState('dashboard')
@@ -582,6 +583,10 @@ function CRM() {
         <button className={vista === 'notificaciones' ? 'active' : ''} onClick={() => cambiarVista('notificaciones')}>
           📱 Notificaciones
         </button>
+
+        <div className="crm-nav-phone" style={{ marginTop: 'auto', padding: '10px' }}>
+          <TwilioPhone identity="admin_crm" />
+        </div>
       </div>
 
       {/* Mensajes */}

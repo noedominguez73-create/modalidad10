@@ -85,6 +85,9 @@ export function obtenerTwilio() {
   return {
     accountSid: process.env.TWILIO_ACCOUNT_SID || '',
     authToken: process.env.TWILIO_AUTH_TOKEN || '',
+    apiKeySid: process.env.TWILIO_API_KEY_SID || '',
+    apiKeySecret: process.env.TWILIO_API_KEY_SECRET || '',
+    twimlAppSid: process.env.TWILIO_TWIML_APP_SID || '',
     webhookBaseUrl: process.env.WEBHOOK_BASE_URL || '',
     phoneNumber: obtenerNumeroPorTipo('voz')?.numero || process.env.TWILIO_PHONE_NUMBER || '',
     whatsappNumber: obtenerNumeroPorTipo('whatsapp')?.numero || process.env.WHATSAPP_NUMBER || ''
