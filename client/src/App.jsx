@@ -446,343 +446,52 @@ function App() {
   const enviarMensajeChat = async () => {
     if (!inputChat.trim()) return
 
-    const nuevoMensaje = { tipo: 'usuario', texto: inputChat }
+    const userText = inputChat.trim()
+    const nuevoMensaje = { tipo: 'usuario', texto: userText }
+
     setMensajes(prev => [...prev, nuevoMensaje])
     setInputChat('')
     setLoading(true)
 
-    // Procesar respuesta según el paso actual
-    const respuesta = await procesarRespuesta(inputChat, pasoActual, contextoChat)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mensaje: userText,
+          datos: datos, // Enviar datos actuales del formulario
+          historial: mensajes.map(m => ({
+            rol: m.tipo === 'agente' ? 'asistente' : 'usuario',
+            mensaje: m.texto
+          })),
+          paso: pasoActual
+        })
+      })
 
-    setMensajes(prev => [...prev, { tipo: 'agente', texto: respuesta.mensaje }])
+      const data = await res.json()
 
-    if (respuesta.nuevoContexto) {
-      setContextoChat(prev => ({ ...prev, ...respuesta.nuevoContexto }))
-    }
+      if (data.mensaje) {
+        setMensajes(prev => [...prev, { tipo: 'agente', texto: data.mensaje }])
+      }
 
-    if (respuesta.siguientePaso) {
-      setPasoActual(respuesta.siguientePaso)
-    }
+      // Sincronizar datos extraídos por la IA con el estado global
+      if (data.nuevosDatos) {
+        setDatos(prev => ({ ...prev, ...data.nuevosDatos }))
+      }
 
-    if (respuesta.calculo) {
-      setResultado(respuesta.calculo)
-    }
+      if (data.nuevoPaso) {
+        setPasoActual(data.nuevoPaso)
+      }
 
-    setLoading(false)
-  }
-
-  const procesarRespuesta = async (mensaje, paso, contexto) => {
-    // Lógica de flujo conversacional
-    switch (paso) {
-      case 'inicio':
-        return {
-          mensaje: '¿En qué año comenzaste a trabajar formalmente y a cotizar al IMSS por primera vez?',
-          siguientePaso: 'regimen'
-        }
-
-      case 'regimen':
-        const msgRegimen = mensaje.toLowerCase()
-        // Detectar si nunca ha trabajado/cotizado
-        if (msgRegimen.includes('nunca') || msgRegimen.includes('no he trabajado') ||
-          msgRegimen.includes('no he cotizado') || msgRegimen.includes('primera vez') ||
-          msgRegimen.includes('extranjero') || msgRegimen.includes('colombiano') ||
-          msgRegimen.includes('venezolano') || msgRegimen.includes('no tengo semanas')) {
-          return {
-            mensaje: `Entiendo que no tienes historial de cotizaciones en el IMSS. En este caso, la **Modalidad 40 no está disponible** para ti (requiere cotizaciones previas).\n\nPero tienes estas opciones:\n\n1️⃣ **Modalidad 10**: Si vas a trabajar de forma independiente (freelance, negocio propio). Incluye servicio médico + acumulas semanas para pensión. Costo: ~$2,400/mes.\n\n2️⃣ **Trabajadoras del Hogar**: Si trabajarás en un hogar (limpieza, cuidado, jardinería), tu patrón DEBE inscribirte obligatoriamente.\n\n3️⃣ **Empleo formal**: Conseguir trabajo donde el patrón te inscriba.\n\n¿Cuál es tu situación laboral actual o planeada?`,
-            nuevoContexto: { sinHistorial: true, regimen: 'nuevo' },
-            siguientePaso: 'opciones_sin_historial'
-          }
-        }
-
-        const año = parseInt(mensaje)
-        if (isNaN(año) || año < 1940 || año > 2024) {
-          return {
-            mensaje: 'Para orientarte mejor, necesito saber: ¿Alguna vez has cotizado al IMSS? Si es así, ¿en qué año aproximadamente comenzaste? Si nunca has cotizado, escribe "nunca".',
-            siguientePaso: 'regimen'
-          }
-        }
-        const regimen = año < 1997 ? 'ley73' : 'ley97'
-        return {
-          mensaje: regimen === 'ley73'
-            ? `Perfecto, cotizaste antes de 1997, eso significa que eres **asegurado Ley 73**. Tu pensión se calcula por semanas + salario promedio. Esto es muy favorable.\n\n¿Cuántas semanas cotizadas tienes reconocidas actualmente? (Puedes consultarlo en la app IMSS Digital)`
-            : `Comenzaste a cotizar después de 1997, eres **asegurado Ley 97**. Tu pensión depende principalmente de tu AFORE. Sin embargo, si también cotizaste antes de 1997, podrías elegir Ley 73.\n\n¿Cuántas semanas cotizadas tienes?`,
-          nuevoContexto: { regimen, añoInicio: año },
-          siguientePaso: 'semanas'
-        }
-
-      case 'semanas':
-        const semanas = parseInt(mensaje)
-        if (isNaN(semanas) || semanas < 0) {
-          return { mensaje: 'Por favor, ingresa un número válido de semanas (ejemplo: 850)' }
-        }
-        if (semanas < 500) {
-          return {
-            mensaje: `Tienes ${semanas} semanas. Para pensionarte por Ley 73 necesitas mínimo **500 semanas**. Te faltan ${500 - semanas} semanas.\n\nLa Modalidad 40 te puede ayudar a completarlas. ¿Actualmente tienes un trabajo donde te cotizan al IMSS?`,
-            nuevoContexto: { semanasActuales: semanas },
-            siguientePaso: 'situacion'
-          }
-        }
-        return {
-          mensaje: `¡Excelente! Con ${semanas} semanas ya cumples el requisito mínimo para pensión. ${semanas >= 1000 ? 'Además tienes un buen número de semanas acumuladas.' : ''}\n\n¿Actualmente tienes un trabajo donde te cotizan al IMSS, o estás dado de baja?`,
-          nuevoContexto: { semanasActuales: semanas },
-          siguientePaso: 'situacion'
-        }
-
-      case 'situacion':
-        const msgLower = mensaje.toLowerCase()
-        if (msgLower.includes('sí') || msgLower.includes('si') || msgLower.includes('tengo') || msgLower.includes('trabajo')) {
-          return {
-            mensaje: 'Mientras tengas un patrón que te cotice, **no puedes inscribirte en Modalidad 40** (ya estás en régimen obligatorio). \n\nLa Modalidad 40 es para cuando dejes de trabajar formalmente. ¿Te gustaría ver una proyección de tu pensión actual?',
-            nuevoContexto: { situacionLaboral: 'activo' },
-            siguientePaso: 'salario'
-          }
-        }
-        return {
-          mensaje: '¡Perfecto! Al no tener patrón, **eres candidato para Modalidad 40**. Esto te permitirá seguir cotizando y mejorar tu pensión.\n\n¿Cuál era tu salario mensual aproximado en tu último empleo?',
-          nuevoContexto: { situacionLaboral: 'baja', elegibleMod40: true },
-          siguientePaso: 'salario'
-        }
-
-      case 'salario':
-        const salarioMensual = parseFloat(mensaje.replace(/[,$]/g, ''))
-        if (isNaN(salarioMensual) || salarioMensual < 1000) {
-          return { mensaje: 'Por favor, ingresa tu salario mensual (ejemplo: 25000)' }
-        }
-        const salarioDiario = salarioMensual / 30
-        return {
-          mensaje: `Tu salario era de **$${salarioMensual.toLocaleString()}/mes** ($${salarioDiario.toFixed(2)} diarios).\n\nEn Modalidad 40 puedes registrar un salario **mayor** (hasta $84,855/mes = 25 UMAs) para mejorar tu pensión. \n\n¿Cuál es tu fecha de nacimiento?`,
-          nuevoContexto: { salarioActual: salarioDiario, salarioDeseado: salarioDiario },
-          siguientePaso: 'nacimiento'
-        }
-
-      case 'nacimiento':
-        // Intentar parsear la fecha
-        let fechaNac
-        try {
-          // Soportar varios formatos
-          if (mensaje.includes('/')) {
-            const partes = mensaje.split('/')
-            fechaNac = new Date(partes[2], partes[1] - 1, partes[0])
-          } else if (mensaje.includes('-')) {
-            fechaNac = new Date(mensaje)
-          } else {
-            return { mensaje: 'Por favor, ingresa tu fecha de nacimiento (ejemplo: 15/03/1965 o 1965-03-15)' }
-          }
-        } catch {
-          return { mensaje: 'Por favor, ingresa tu fecha de nacimiento (ejemplo: 15/03/1965)' }
-        }
-
-        const hoy = new Date()
-        const edad = hoy.getFullYear() - fechaNac.getFullYear()
-
-        if (edad < 40 || edad > 80) {
-          return { mensaje: 'La fecha no parece correcta. Por favor verifica.' }
-        }
-
-        return {
-          mensaje: `Tienes **${edad} años**. ${edad >= 60 ? '¡Ya puedes jubilarte!' : `Te faltan ${60 - edad} años para jubilarte a los 60.`}\n\n¿A qué edad te gustaría jubilarte? (60-65 años)`,
-          nuevoContexto: { fechaNacimiento: fechaNac.toISOString().split('T')[0], edadActual: edad },
-          siguientePaso: 'edad_retiro'
-        }
-
-      case 'edad_retiro':
-        const edadRetiro = parseInt(mensaje)
-        if (isNaN(edadRetiro) || edadRetiro < 60 || edadRetiro > 65) {
-          return { mensaje: 'La edad de retiro debe estar entre 60 y 65 años.' }
-        }
-
-        // Tenemos todos los datos, calcular
-        const datosCalculo = {
-          fechaNacimiento: contexto.fechaNacimiento,
-          semanasActuales: contexto.semanasActuales,
-          salarioDeseado: contexto.salarioActual,
-          edadRetiro
-        }
-
-        try {
-          const res = await fetch('/api/calcular', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosCalculo)
-          })
-          const data = await res.json()
-
-          if (data.success) {
-            const r = data.data
-            const factores = { 60: '75%', 61: '80%', 62: '85%', 63: '90%', 64: '95%', 65: '100%' }
-
-            return {
-              mensaje: `## 📊 Tu Proyección de Pensión\n\n` +
-                `**Edad de retiro:** ${edadRetiro} años (Factor: ${factores[edadRetiro]})\n` +
-                `**Semanas finales:** ${r.semanas.finales}\n\n` +
-                `### 💰 Cuota Modalidad 40\n` +
-                `- Mensual: **$${r.cuotas.cuotaMensual.toLocaleString()}**\n` +
-                `- Inversión total: $${r.cuotas.inversionTotal.toLocaleString()}\n\n` +
-                `### 🎯 Pensión Estimada\n` +
-                `- Mensual: **$${r.pension.mensualEstimada.toLocaleString()}**\n` +
-                `- Anual (con aguinaldo): $${r.pension.pensionAnual.toLocaleString()}\n\n` +
-                `### 📈 Análisis de Inversión\n` +
-                `- Recuperas tu inversión en **${r.analisisInversion.recuperacionEnMeses} meses**\n` +
-                `- Rendimiento anual: ${r.analisisInversion.rendimientoAnual}%\n\n` +
-                `¿Te gustaría ver qué pasa si registras un salario más alto? Puedes ir a la pestaña "Calculadora" para simular diferentes escenarios.`,
-              nuevoContexto: { edadRetiro, calculoRealizado: true },
-              calculo: data.data,
-              siguientePaso: 'completado'
-            }
-          }
-        } catch (e) {
-          return { mensaje: 'Hubo un error al calcular. Por favor intenta de nuevo.' }
-        }
-        break
-
-      case 'completado':
-        const msgCompletado = mensaje.toLowerCase()
-
-        // Orientación para Trabajadoras del Hogar
-        if (msgCompletado.includes('orientacion') || msgCompletado.includes('orientación') || msgCompletado.includes('como me inscribo') || msgCompletado.includes('ayuda')) {
-          if (contexto.opcionElegida === 'hogar') {
-            return {
-              mensaje: `**Orientación para Trabajadoras del Hogar:**\n\n**Si tu patrón NO te quiere inscribir:**\n1. 📞 Llama a PROFEDET: 800-911-7877 (gratis)\n2. 🏢 Acude a la subdelegación IMSS más cercana\n3. 📋 Presenta queja formal con tus datos y los del empleador\n\n**Documentos que necesitas:**\n- Tu CURP\n- Identificación oficial (INE)\n- Comprobante de domicilio\n- Datos de tu empleador (nombre, dirección, teléfono)\n\n**Portal para patrones:**\nhttps://serviciosdigitales.imss.gob.mx/portal-empleador/\n\n¿Tu patrón está dispuesto a inscribirte o necesitas denunciarlo?`
-            }
-          }
-          return {
-            mensaje: `¿En qué necesitas orientación?\n\n1️⃣ **Modalidad 40** - Para mejorar tu pensión\n2️⃣ **Modalidad 10** - Para trabajadores independientes\n3️⃣ **Trabajadoras del Hogar** - Si trabajas en un hogar\n4️⃣ **Pensiones IMSS** - Requisitos y cálculos\n\nEscribe el número o el tema que te interesa.`
-          }
-        }
-
-        // Cuotas y aportaciones
-        if (msgCompletado.includes('cuota') || msgCompletado.includes('aportacion') || msgCompletado.includes('costo') || msgCompletado.includes('precio') || msgCompletado.includes('pago')) {
-          return {
-            mensaje: `**Cuotas y Aportaciones IMSS 2025:**\n\n**Modalidad 40** (solo pensión, sin servicio médico):\n- Cuota: **10.075%** del salario mensual\n- Ejemplo: Salario $20,000 → Pago ~$2,015/mes\n- Tope máximo: 25 UMAs (~$84,855/mes)\n\n**Modalidad 10** (servicio médico + pensión):\n- Incluye cuotas patrón + obrero\n- Ejemplo: Salario $13,000 → Pago ~$2,420/mes\n- Incluye IMSS completo\n\n**Trabajadoras del Hogar:**\n- El patrón paga según días trabajados por semana\n- 1 día/semana: ~$250/mes\n- 5 días/semana: ~$1,100/mes\n\n¿Te gustaría calcular tu cuota específica? Ve a las pestañas **Mod 40** o **Mod 10** para usar la calculadora.`
-          }
-        }
-
-        // Requisitos
-        if (msgCompletado.includes('requisito') || msgCompletado.includes('necesito para') || msgCompletado.includes('que ocupo')) {
-          return {
-            mensaje: `**Requisitos por modalidad:**\n\n**Modalidad 40:**\n- Mínimo 52 semanas cotizadas en últimos 5 años\n- No tener patrón actual\n- Inscribirte dentro de 5 años de tu última baja\n\n**Modalidad 10:**\n- Ser mayor de 18 años\n- No tener patrón\n- Acudir a subdelegación IMSS con INE, CURP y comprobante domicilio\n\n**Trabajadoras del Hogar:**\n- El patrón debe registrarse en portal IMSS\n- Proporcionar CURP del trabajador\n- Indicar días trabajados por semana\n\n¿Sobre cuál modalidad necesitas más detalles?`
-          }
-        }
-
-        // Diferencias Ley 73 vs 97
-        if (msgCompletado.includes('ley 73') || msgCompletado.includes('ley 97') || msgCompletado.includes('diferencia') || msgCompletado.includes('cual es mejor')) {
-          return {
-            mensaje: `**Diferencias Ley 73 vs Ley 97:**\n\n**Ley 73** (cotizaste ANTES de julio 1997):\n✅ Pensión vitalicia garantizada por el gobierno\n✅ Se calcula por semanas + salario promedio\n✅ Más favorable para pensión\n\n**Ley 97** (cotizaste DESPUÉS de julio 1997):\n⚠️ Pensión depende de tu AFORE\n⚠️ Se calcula por ahorro acumulado\n⚠️ Generalmente menor pensión\n\n**¿Puedo elegir?**\nSi cotizaste en AMBOS períodos, puedes elegir la más conveniente (casi siempre Ley 73).\n\n¿Sabes bajo qué ley cotizaste? Si no, dime en qué año empezaste a trabajar.`
-          }
-        }
-
-        // Pensión
-        if (msgCompletado.includes('pension') || msgCompletado.includes('pensión') || msgCompletado.includes('jubilar') || msgCompletado.includes('retirar')) {
-          return {
-            mensaje: `**Información sobre Pensiones IMSS:**\n\n**Requisitos mínimos:**\n- 500 semanas cotizadas (Ley 73)\n- 60 años de edad (cesantía) o 65 años (vejez)\n\n**Factores que aumentan tu pensión:**\n- Más semanas cotizadas\n- Mayor salario promedio de últimos 5 años\n- Retirarte a los 65 en lugar de 60\n\n**Modalidad 40 te ayuda a:**\n- Completar semanas faltantes\n- Aumentar tu salario de cotización (hasta 25 UMAs)\n- Mejorar significativamente tu pensión\n\n¿Quieres calcular tu pensión estimada? Ve a la pestaña **Mod 40** y usa la calculadora.`
-          }
-        }
-
-        // Salarios
-        if (msgCompletado.includes('salario') || msgCompletado.includes('más alto') || msgCompletado.includes('escenario') || msgCompletado.includes('uma')) {
-          return {
-            mensaje: `**Salarios en Modalidad 40:**\n\n**Puedes registrar un salario MAYOR al que tenías:**\n- Mínimo: 1 UMA ($113.14/día = $3,394/mes)\n- Máximo: 25 UMAs ($2,828/día = $84,855/mes)\n\n**¿Conviene registrar el máximo?**\nDepende de cuántos años te faltan para jubilarte:\n- Menos de 3 años: El costo puede no recuperarse\n- 3-5 años: Generalmente conviene\n- Más de 5 años: Muy rentable\n\nPara simular diferentes salarios, ve a la pestaña **"Mod 40"** y usa la calculadora.\n\n¿Te gustaría que te oriente sobre qué salario te conviene?`
-          }
-        }
-
-        // Si tiene contexto de Trabajadoras del Hogar, mantenerlo relevante
-        if (contexto.opcionElegida === 'hogar') {
-          return {
-            mensaje: `¿En qué más puedo ayudarte sobre **Trabajadoras del Hogar**?\n\n- ¿Cómo inscribirme?\n- ¿Cuánto debe pagar mi patrón?\n- ¿Qué hacer si no me quieren inscribir?\n- ¿Qué beneficios tengo?\n\nO si prefieres, pregúntame sobre otro tema.`
-          }
-        }
-
-        // Buscar en base de conocimiento como respaldo
-        try {
-          const res = await fetch('/api/rag/buscar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ consulta: mensaje })
-          })
-          const data = await res.json()
-
-          if (data.resultados && data.resultados.length > 0) {
-            const mejor = data.resultados[0]
-            return {
-              mensaje: `**${mejor.titulo || mejor.pregunta}**\n\n${mejor.contenido || mejor.respuesta}\n\n📚 *Fuente: ${mejor.referencia}*`
-            }
-          }
-        } catch (e) {
-          console.error(e)
-        }
-
-        return {
-          mensaje: '¿En qué puedo ayudarte?\n\n1️⃣ **Cuotas y costos** - Cuánto pagar en cada modalidad\n2️⃣ **Requisitos** - Qué necesitas para inscribirte\n3️⃣ **Pensiones** - Cálculo y proyección\n4️⃣ **Ley 73 vs 97** - Diferencias y cuál te conviene\n\nEscribe el número o tu pregunta.'
-        }
-
-      case 'opciones_sin_historial':
-        const msgOpcion = mensaje.toLowerCase().trim()
-        // Aceptar número 1 o palabras relacionadas con Modalidad 10
-        if (msgOpcion === '1' || msgOpcion.includes('modalidad 10') || msgOpcion.includes('mod 10') || msgOpcion.includes('independiente') || msgOpcion.includes('freelance') || msgOpcion.includes('negocio')) {
-          return {
-            mensaje: `¡La **Modalidad 10** es ideal para ti!\n\n**Beneficios:**\n✅ Servicio médico completo en IMSS\n✅ Acumulas semanas para tu pensión\n✅ Puedes elegir tu salario de cotización\n\n**Costo aproximado con salario de $13,000/mes:**\n💰 ~$2,420/mes (cuotas patronales + obrero)\n\n**Para inscribirte necesitas:**\n1. Acudir a la subdelegación IMSS de tu zona\n2. Llevar identificación oficial, CURP, comprobante de domicilio\n3. Llenar solicitud de inscripción voluntaria\n\n¿Te gustaría que calcule el costo exacto según el salario que deseas registrar?`,
-            nuevoContexto: { opcionElegida: 'mod10' },
-            siguientePaso: 'calcular_mod10'
-          }
-        }
-        // Aceptar número 2 o palabras relacionadas con Trabajadoras del Hogar
-        if (msgOpcion === '2' || msgOpcion.includes('hogar') || msgOpcion.includes('domestico') || msgOpcion.includes('limpieza') || msgOpcion.includes('cuidado') || msgOpcion.includes('patron')) {
-          return {
-            mensaje: `**Trabajadoras del Hogar** es la opción si trabajas en un hogar.\n\n**Importante:** Desde 2022 es **OBLIGATORIO** que tu patrón (empleador) te inscriba.\n\n**Beneficios:**\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ Incapacidades pagadas\n✅ Acceso a guarderías IMSS\n\n**El patrón debe:**\n1. Registrarse como empleador en el portal IMSS\n2. Inscribirte con tu CURP y datos\n3. Pagar las cuotas según tus días trabajados\n\nSi tu patrón no te quiere inscribir, puedes denunciarlo en PROFEDET o acudir al IMSS.\n\n¿Tu empleador ya te inscribió o necesitas orientación?`,
-            nuevoContexto: { opcionElegida: 'hogar' },
-            siguientePaso: 'completado'
-          }
-        }
-        // Aceptar número 3 o palabras relacionadas con empleo formal
-        if (msgOpcion === '3' || msgOpcion.includes('empleo') || msgOpcion.includes('trabajo formal') || msgOpcion.includes('empresa')) {
-          return {
-            mensaje: `Si consigues un **empleo formal**, tu patrón está obligado a inscribirte al IMSS desde el primer día.\n\n**Beneficios:**\n✅ El patrón paga la mayor parte de las cuotas\n✅ Servicio médico completo\n✅ Acumulas semanas para pensión\n✅ INFONAVIT (crédito vivienda)\n✅ AFORE (ahorro para retiro)\n\n**Consejos:**\n- Verifica que te den de alta (consulta en IMSS Digital)\n- Guarda tus recibos de nómina\n- Revisa que el salario registrado sea el correcto\n\n¿Hay algo más que pueda ayudarte?`,
-            nuevoContexto: { opcionElegida: 'formal' },
-            siguientePaso: 'completado'
-          }
-        }
-        return {
-          mensaje: 'Por favor, indícame cuál opción te interesa:\n\n1️⃣ **Modalidad 10** - Si serás trabajador independiente\n2️⃣ **Trabajadoras del Hogar** - Si trabajarás en un hogar\n3️⃣ **Empleo formal** - Si buscarás trabajo en una empresa',
-          siguientePaso: 'opciones_sin_historial'
-        }
-
-      case 'calcular_mod10':
-        const salarioMod10 = parseFloat(mensaje.replace(/[,$]/g, ''))
-        if (isNaN(salarioMod10) || salarioMod10 < 1000) {
-          return { mensaje: '¿Con qué salario mensual te gustaría cotizar? (ejemplo: 15000)' }
-        }
-        try {
-          const resMod10 = await fetch('/api/calcular-mod10', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              salarioMensual: salarioMod10,
-              claseRiesgo: 'I',
-              incluirInfonavit: false
-            })
-          })
-          const dataMod10 = await resMod10.json()
-          if (dataMod10.success) {
-            const r = dataMod10.data
-            return {
-              mensaje: `## 📊 Cálculo Modalidad 10\n\n**Salario mensual:** $${salarioMod10.toLocaleString()}\n\n**Cuotas mensuales:**\n- Cuota patrón: $${r.totales.patron.toLocaleString()}\n- Cuota obrero: $${r.totales.obrero.toLocaleString()}\n- **TOTAL: $${r.totales.mensualSinInfonavit.toLocaleString()}/mes**\n\n**Costo anual:** $${r.totales.anualSinInfonavit.toLocaleString()}\n\n✅ Incluye servicio médico completo\n✅ Acumulas 52 semanas por año\n\n¿Te gustaría saber cómo inscribirte?`,
-              nuevoContexto: { calculoMod10: r },
-              siguientePaso: 'completado'
-            }
-          }
-        } catch (e) {
-          return { mensaje: 'Hubo un error al calcular. Por favor intenta de nuevo.' }
-        }
-        break
-
-      default:
-        return {
-          mensaje: '¿En qué puedo ayudarte?',
-          siguientePaso: 'inicio'
-        }
+    } catch (err) {
+      setMensajes(prev => [...prev, {
+        tipo: 'agente',
+        texto: 'Lo siento, tuve un problema al conectar con mi cerebro digital. ¿Podrías reintentar?'
+      }])
+    } finally {
+      setLoading(false)
     }
   }
-
   const calcularMod10 = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -823,7 +532,7 @@ function App() {
   ]
 
   return (
-    <div className="app">
+    <div className="app" >
       <header>
         <div className="logo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
