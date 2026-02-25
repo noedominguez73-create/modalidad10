@@ -337,24 +337,33 @@ function App() {
   // Verificar estado de servicios
   const verificarServicios = async () => {
     try {
-      const [twilioRes, telegramRes] = await Promise.all([
+      setSettingsMsg('Verificando conexiones...')
+      const provider = settingsData.llm?.provider || 'gemini'
+
+      const [twilioRes, telegramRes, deepgramRes, llmRes] = await Promise.all([
         fetch('/api/settings/test-twilio', { method: 'POST' }),
-        fetch('/api/settings/test-telegram', { method: 'POST' })
+        fetch('/api/settings/test-telegram', { method: 'POST' }),
+        fetch('/api/settings/test-deepgram', { method: 'POST' }),
+        fetch(`/api/settings/test-llm/${provider}`, { method: 'POST' })
       ])
+
       const twilioData = await twilioRes.json()
       const telegramData = await telegramRes.json()
+      const deepgramData = await deepgramRes.json()
+      const llmData = await llmRes.json()
 
-      setServiciosStatus(prev => ({
-        ...prev,
+      setServiciosStatus({
         twilio: twilioData.conectado,
         telegram: telegramData.conectado,
+        deepgram: deepgramData.conectado,
+        llmConfigurado: llmData.conectado,
         twilioError: twilioData.error,
-        telegramError: telegramData.error
-      }))
+        telegramError: telegramData.error,
+        deepgramError: deepgramData.error,
+        llmError: llmData.error
+      })
 
-      if (twilioData.conectado || telegramData.conectado) {
-        setSettingsMsg('Verificación completada')
-      }
+      setSettingsMsg('Verificación completada')
     } catch (err) {
       setSettingsMsg('Error verificando servicios')
     }
@@ -475,9 +484,9 @@ function App() {
         const msgRegimen = mensaje.toLowerCase()
         // Detectar si nunca ha trabajado/cotizado
         if (msgRegimen.includes('nunca') || msgRegimen.includes('no he trabajado') ||
-            msgRegimen.includes('no he cotizado') || msgRegimen.includes('primera vez') ||
-            msgRegimen.includes('extranjero') || msgRegimen.includes('colombiano') ||
-            msgRegimen.includes('venezolano') || msgRegimen.includes('no tengo semanas')) {
+          msgRegimen.includes('no he cotizado') || msgRegimen.includes('primera vez') ||
+          msgRegimen.includes('extranjero') || msgRegimen.includes('colombiano') ||
+          msgRegimen.includes('venezolano') || msgRegimen.includes('no tengo semanas')) {
           return {
             mensaje: `Entiendo que no tienes historial de cotizaciones en el IMSS. En este caso, la **Modalidad 40 no está disponible** para ti (requiere cotizaciones previas).\n\nPero tienes estas opciones:\n\n1️⃣ **Modalidad 10**: Si vas a trabajar de forma independiente (freelance, negocio propio). Incluye servicio médico + acumulas semanas para pensión. Costo: ~$2,400/mes.\n\n2️⃣ **Trabajadoras del Hogar**: Si trabajarás en un hogar (limpieza, cuidado, jardinería), tu patrón DEBE inscribirte obligatoriamente.\n\n3️⃣ **Empleo formal**: Conseguir trabajo donde el patrón te inscriba.\n\n¿Cuál es tu situación laboral actual o planeada?`,
             nuevoContexto: { sinHistorial: true, regimen: 'nuevo' },
@@ -818,9 +827,9 @@ function App() {
       <header>
         <div className="logo">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
           </svg>
           <h1>Calculadora Modalidad 40</h1>
         </div>
@@ -949,17 +958,17 @@ function App() {
               <div className="quick-calc">
                 <h4>Salarios Predefinidos (UMAs 2025)</h4>
                 <div className="uma-buttons">
-                  <button type="button" onClick={() => setDatos(d => ({...d, salarioDeseado: (UMA_2025 * 10).toFixed(2)}))}>
-                    10 UMAs<br/><small>{formatMoney(UMA_2025 * 10 * 30)}/mes</small>
+                  <button type="button" onClick={() => setDatos(d => ({ ...d, salarioDeseado: (UMA_2025 * 10).toFixed(2) }))}>
+                    10 UMAs<br /><small>{formatMoney(UMA_2025 * 10 * 30)}/mes</small>
                   </button>
-                  <button type="button" onClick={() => setDatos(d => ({...d, salarioDeseado: (UMA_2025 * 15).toFixed(2)}))}>
-                    15 UMAs<br/><small>{formatMoney(UMA_2025 * 15 * 30)}/mes</small>
+                  <button type="button" onClick={() => setDatos(d => ({ ...d, salarioDeseado: (UMA_2025 * 15).toFixed(2) }))}>
+                    15 UMAs<br /><small>{formatMoney(UMA_2025 * 15 * 30)}/mes</small>
                   </button>
-                  <button type="button" onClick={() => setDatos(d => ({...d, salarioDeseado: (UMA_2025 * 20).toFixed(2)}))}>
-                    20 UMAs<br/><small>{formatMoney(UMA_2025 * 20 * 30)}/mes</small>
+                  <button type="button" onClick={() => setDatos(d => ({ ...d, salarioDeseado: (UMA_2025 * 20).toFixed(2) }))}>
+                    20 UMAs<br /><small>{formatMoney(UMA_2025 * 20 * 30)}/mes</small>
                   </button>
-                  <button type="button" onClick={() => setDatos(d => ({...d, salarioDeseado: (UMA_2025 * 25).toFixed(2)}))}>
-                    25 UMAs (MAX)<br/><small>{formatMoney(UMA_2025 * 25 * 30)}/mes</small>
+                  <button type="button" onClick={() => setDatos(d => ({ ...d, salarioDeseado: (UMA_2025 * 25).toFixed(2) }))}>
+                    25 UMAs (MAX)<br /><small>{formatMoney(UMA_2025 * 25 * 30)}/mes</small>
                   </button>
                 </div>
               </div>
@@ -1484,28 +1493,40 @@ function App() {
 
               <div className="services-status">
                 <div className="service-item">
-                  <span className="service-name">Twilio (Voz/WhatsApp)</span>
-                  <span className={`status-badge ${serviciosStatus.twilio ? 'connected' : 'disconnected'}`}>
-                    {serviciosStatus.twilio ? 'Conectado' : 'No configurado'}
-                  </span>
+                  <span className="service-name">Twilio (Voice/WhatsApp)</span>
+                  <div className="status-container">
+                    <span className={`status-badge ${serviciosStatus.twilio ? 'connected' : 'disconnected'}`}>
+                      {serviciosStatus.twilio ? 'Conectado' : 'Desconectado'}
+                    </span>
+                    {serviciosStatus.twilioError && <span className="status-error-msg">{serviciosStatus.twilioError}</span>}
+                  </div>
                 </div>
                 <div className="service-item">
                   <span className="service-name">Telegram</span>
-                  <span className={`status-badge ${serviciosStatus.telegram ? 'connected' : 'disconnected'}`}>
-                    {serviciosStatus.telegram ? 'Conectado' : 'No configurado'}
-                  </span>
+                  <div className="status-container">
+                    <span className={`status-badge ${serviciosStatus.telegram ? 'connected' : 'disconnected'}`}>
+                      {serviciosStatus.telegram ? 'Conectado' : 'Desconectado'}
+                    </span>
+                    {serviciosStatus.telegramError && <span className="status-error-msg">{serviciosStatus.telegramError}</span>}
+                  </div>
                 </div>
                 <div className="service-item">
                   <span className="service-name">Deepgram (Voz IA)</span>
-                  <span className={`status-badge ${serviciosStatus.deepgram ? 'connected' : 'disconnected'}`}>
-                    {serviciosStatus.deepgram ? 'Conectado' : 'No configurado'}
-                  </span>
+                  <div className="status-container">
+                    <span className={`status-badge ${serviciosStatus.deepgram ? 'connected' : 'disconnected'}`}>
+                      {serviciosStatus.deepgram ? 'Conectado' : 'Desconectado'}
+                    </span>
+                    {serviciosStatus.deepgramError && <span className="status-error-msg">{serviciosStatus.deepgramError}</span>}
+                  </div>
                 </div>
                 <div className="service-item">
                   <span className="service-name">LLM (IA Conversacional)</span>
-                  <span className={`status-badge ${serviciosStatus.llmConfigurado ? 'connected' : 'disconnected'}`}>
-                    {serviciosStatus.llmConfigurado ? 'Conectado' : 'No configurado'}
-                  </span>
+                  <div className="status-container">
+                    <span className={`status-badge ${serviciosStatus.llmConfigurado ? 'connected' : 'disconnected'}`}>
+                      {serviciosStatus.llmConfigurado ? 'Conectado' : 'Desconectado'}
+                    </span>
+                    {serviciosStatus.llmError && <span className="status-error-msg">{serviciosStatus.llmError}</span>}
+                  </div>
                 </div>
               </div>
 
@@ -1674,7 +1695,7 @@ function App() {
                     </select>
                   </div>
                 </div>
-                <div className="settings-actions" style={{marginTop: '15px'}}>
+                <div className="settings-actions" style={{ marginTop: '15px' }}>
                   <button
                     onClick={async () => {
                       try {

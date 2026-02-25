@@ -123,23 +123,44 @@ export function obtenerApiKeys() {
 }
 
 /**
- * Verificar qué servicios están configurados
+ * Verificar qué servicios están configurados con validación básica de formato
  */
 export function obtenerEstadoServicios() {
   const keys = obtenerApiKeys();
   const twilio = obtenerTwilio();
   const telegram = obtenerTelegram();
 
+  // Validar formato del token de Telegram (números:cadena)
+  const telegramValido = telegram.botToken && /^\d+:[A-Za-z0-9_-]+$/.test(telegram.botToken);
+
+  // Validar Twilio (no placeholders)
+  const twilioValido = !!(
+    twilio.accountSid &&
+    twilio.accountSid.startsWith('AC') &&
+    twilio.authToken &&
+    twilio.authToken.length > 20 &&
+    !twilio.authToken.includes('tu_')
+  );
+
+  // Validar Deepgram
+  const deepgramValido = !!(keys.deepgram && keys.deepgram.length > 20 && !keys.deepgram.includes('tu_'));
+
   return {
-    twilio: !!(twilio.accountSid && twilio.authToken),
-    telegram: !!telegram.botToken,
-    deepgram: !!keys.deepgram,
-    openai: !!keys.openai,
-    anthropic: !!keys.anthropic,
-    gemini: !!keys.gemini,
-    groq: !!keys.groq,
-    glm5: !!keys.glm5,
-    llmConfigurado: !!(keys.openai || keys.anthropic || keys.gemini || keys.groq || keys.glm5)
+    twilio: twilioValido,
+    telegram: telegramValido,
+    deepgram: deepgramValido,
+    openai: !!(keys.openai && keys.openai.startsWith('sk-') && keys.openai.length > 30),
+    anthropic: !!(keys.anthropic && keys.anthropic.startsWith('sk-ant-')),
+    gemini: !!(keys.gemini && keys.gemini.length > 30),
+    groq: !!(keys.groq && keys.groq.startsWith('gsk_')),
+    glm5: !!(keys.glm5 && keys.glm5.length > 30),
+    llmConfigurado: !!(
+      (keys.openai && keys.openai.startsWith('sk-')) ||
+      (keys.anthropic && keys.anthropic.startsWith('sk-ant-')) ||
+      (keys.gemini && keys.gemini.length > 30) ||
+      (keys.groq && keys.groq.startsWith('gsk_')) ||
+      (keys.glm5 && keys.glm5.length > 30)
+    )
   };
 }
 

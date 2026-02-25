@@ -14,6 +14,7 @@ import training from './training.js';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import * as connectivity from './utils/connectivity.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -496,12 +497,25 @@ app.post('/api/db/recargar', (req, res) => {
 
 // Importar módulos de canales (lazy loading para evitar errores si no están configurados)
 let twilioVoice, whatsapp, telegram, aiAgent, documentValidator;
+let canalesActivos = {
+  twilio: false,
+  whatsapp: false,
+  telegram: false,
+  deepgram: false,
+  llm: false
+};
 
 async function initChannels() {
   // Primero cargar el agente IA (necesario para todos los canales)
   try {
     aiAgent = await import('./ai-agent.js');
     console.log('✓ Agente IA cargado');
+
+    // Verificar conectividad del LLM por defecto
+    const keys = settings.obtenerApiKeys();
+    const provider = settings.cargarSettings().llm?.provider || 'gemini';
+    const llmOk = await connectivity.verificarLLM(provider, keys[provider]);
+    canalesActivos.llm = llmOk.ok;
   } catch (e) {
     console.log('❌ Error cargando Agente IA:', e.message);
   }
@@ -509,6 +523,11 @@ async function initChannels() {
   try {
     documentValidator = await import('./documents/validator.js');
     console.log('✓ Validador de documentos cargado');
+
+    // Verificar Deepgram opcionalmente (si se usa para TTS)
+    const keys = settings.obtenerApiKeys();
+    const dgOk = await connectivity.verificarDeepgram(keys.deepgram);
+    canalesActivos.deepgram = dgOk.ok;
   } catch (e) {
     console.log('⚠ Validador de documentos no disponible:', e.message);
   }
@@ -517,32 +536,41 @@ async function initChannels() {
   try {
     twilioVoice = await import('./channels/twilio-voice.js');
     const initialized = twilioVoice.default.initTwilio();
+    canalesActivos.twilio = !!initialized;
     if (initialized) {
       console.log('✓ Twilio Voice listo');
     }
-  } catch (e) { console.log('⚠ Twilio Voice no disponible:', e.message); }
+  } catch (e) {
+    console.log('⚠ Twilio Voice no disponible:', e.message);
+    canalesActivos.twilio = false;
+  }
 
   // Cargar WhatsApp
   try {
     whatsapp = await import('./channels/whatsapp.js');
-    whatsapp.default.initWhatsApp();
-  } catch (e) { console.log('⚠ WhatsApp no disponible:', e.message); }
+    const ok = await whatsapp.default.initWhatsApp();
+    canalesActivos.whatsapp = !!ok;
+  } catch (e) {
+    console.log('⚠ WhatsApp no disponible:', e.message);
+    canalesActivos.whatsapp = false;
+  }
 
   // Cargar Telegram (con delay para evitar conflicto con instancia anterior)
-  try {
-    telegram = await import('./channels/telegram.js');
-    if (aiAgent && documentValidator) {
-      // Esperar 3 segundos para que la instancia anterior cierre
+  setTimeout(async () => {
+    try {
+      telegram = await import('./channels/telegram.js');
       console.log('⏳ Esperando para iniciar Telegram...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      telegram.default.initTelegram(
-        aiAgent.default.procesarConIA,
+      const ok = telegram.default.initTelegram(
+        aiAgent.procesarMensaje,
         documentValidator.default.validarDocumento
       );
+      canalesActivos.telegram = !!ok;
+    } catch (e) {
+      console.log('⚠ Telegram no disponible:', e.message);
+      canalesActivos.telegram = false;
     }
-  } catch (e) { console.log('⚠ Telegram no disponible:', e.message); }
+  }, 2000);
 }
-
 // Inicializar canales al arrancar
 initChannels().then(() => {
   console.log('🚀 Todos los canales cargados y listos');
@@ -820,6 +848,15 @@ app.get('/api/feedback/export', (req, res) => {
 app.get('/api/settings', (req, res) => {
   try {
     const config = settings.obtenerSettingsSeguro();
+
+    // Inyectar el estado REAL de los canales inicializados
+    config.servicios = {
+      ...config.servicios,
+      twilio: canalesActivos.twilio,
+      whatsapp: canalesActivos.whatsapp,
+      telegram: canalesActivos.telegram
+    };
+
     res.json(config);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -906,10 +943,30 @@ app.post('/api/settings/test-twilio', async (req, res) => {
       }
     });
   } catch (error) {
-    res.json({
-      conectado: false,
-      error: error.message
-    });
+    res.json({ conectado: false, error: error.message });
+  }
+});
+
+// Probar conexión con Deepgram
+app.post('/api/settings/test-deepgram', async (req, res) => {
+  try {
+    const keys = settings.obtenerApiKeys();
+    const result = await connectivity.verificarDeepgram(keys.deepgram);
+    res.json({ conectado: result.ok, error: result.error });
+  } catch (error) {
+    res.json({ conectado: false, error: error.message });
+  }
+});
+
+// Probar conexión con LLMs
+app.post('/api/settings/test-llm/:provider', async (req, res) => {
+  try {
+    const { provider } = req.params;
+    const keys = settings.obtenerApiKeys();
+    const result = await connectivity.verificarLLM(provider, keys[provider]);
+    res.json({ conectado: result.ok, error: result.error });
+  } catch (error) {
+    res.json({ conectado: false, error: error.message });
   }
 });
 
@@ -1808,9 +1865,9 @@ app.get('/api/status', (req, res) => {
     ],
     canales: {
       web: true,
-      twilio: !!twilioVoice,
-      whatsapp: !!whatsapp,
-      telegram: !!telegram
+      twilio: canalesActivos.twilio,
+      whatsapp: canalesActivos.whatsapp,
+      telegram: canalesActivos.telegram
     },
     uma_vigente: db.obtenerUMA()?.diario || 113.14,
     feedback: feedbackStats ? {

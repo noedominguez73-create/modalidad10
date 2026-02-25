@@ -709,6 +709,36 @@ footer {
 
 /* Estado de servicios */
 .services-status {
+  display: grid;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.service-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.status-error-msg {
+  font-size: 0.75rem;
+  color: #dc3545;
+  font-style: italic;
+  max-width: 200px;
+  text-align: right;
+  word-break: break-all;
+}
+.services-status {
   display: flex;
   flex-direction: column;
   gap: 12px;
