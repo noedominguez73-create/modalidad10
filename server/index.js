@@ -81,6 +81,18 @@ app.use((req, res, next) => {
 });
 app.use(express.static('client/dist'));
 
+// INICIO INMEDIATO DEL SERVIDOR (Para Health Check de Railway)
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`
+╔═══════════════════════════════════════════════════════════════════╗
+║  🧮 CALCULADORA IMSS MULTICANAL + CRM v3.5                        ║
+║  ═══════════════════════════════════════════════════════════════  ║
+║  🚀 SERVIDOR ESCUCHANDO EN EL PUERTO: ${PORT}                      ║
+║  🏠 HOST: 0.0.0.0 (Apto para Railway/DOCKER)                      ║
+╚═══════════════════════════════════════════════════════════════════╝
+  `);
+});
+
 // Health check para Railway
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -571,11 +583,13 @@ async function initChannels() {
     }
   }, 2000);
 }
-// Inicializar canales al arrancar
-initChannels().then(() => {
-  console.log('🚀 Todos los canales cargados y listos');
-}).catch(err => {
-  console.error('💥 Error crítico inicializando canales:', err);
+// Inicializar canales al arrancar (en segundo plano)
+setImmediate(() => {
+  initChannels().then(() => {
+    console.log('🚀 Todos los canales cargados y listos');
+  }).catch(err => {
+    console.error('💥 Error crítico inicializando canales:', err);
+  });
 });
 
 import twilioToken from './channels/twilio-token.js';
@@ -1886,35 +1900,9 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`
-╔═══════════════════════════════════════════════════════════════════╗
-║  🧮 CALCULADORA IMSS MULTICANAL + CRM v3.5                        ║
-║  ═══════════════════════════════════════════════════════════════  ║
-║                                                                   ║
-║  📊 Mod 40 (Pensión) | 📋 Mod 10 (Completo) | 🏥 Mod 33 (Médico)  ║
-║  🏠 Trabajadoras Hogar | 🏢 Divisiones IMSS | 👍 Feedback         ║
-║                                                                   ║
-║  📋 CRM: Prospectos → Clientes → Pagos → IMSS → Vigencia          ║
-║                                                                   ║
-║  ENDPOINTS:                                                       ║
-║  🌐 Dashboard:        http://localhost:${PORT}                       ║
-║  📡 API:              http://localhost:${PORT}/api                   ║
-║  📋 CRM Dashboard:    http://localhost:${PORT}/api/crm/dashboard     ║
-║  👥 Prospectos:       http://localhost:${PORT}/api/crm/prospectos    ║
-║  🧑‍💼 Clientes:         http://localhost:${PORT}/api/crm/clientes      ║
-║  💰 Pagos:            http://localhost:${PORT}/api/crm/pagos         ║
-║  📞 Twilio Voice:     http://localhost:${PORT}/api/twilio/voice      ║
-║  📱 WhatsApp:         http://localhost:${PORT}/api/whatsapp/webhook  ║
-║                                                                   ║
-║  UMA 2026: $117.31 | Tope: $2,932.75 diarios                      ║
-╚═══════════════════════════════════════════════════════════════════╝
-  `);
-});
-
 // Manejo de cierre limpio (Railway SIGTERM)
 const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} recibido. Cerrando servicios...`);
+  console.log(`\n${signal} recibido.Cerrando servicios...`);
 
   // Detener Telegram polling
   if (telegram && telegram.default && telegram.default.stopTelegram) {
