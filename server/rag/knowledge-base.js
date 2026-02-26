@@ -703,37 +703,96 @@ export const PREGUNTAS_FRECUENTES = [
   }
 ];
 
+import training from '../training.js';
+
 export function buscarEnBaseConocimiento(consulta) {
   const consultaLower = consulta.toLowerCase();
   const resultados = [];
 
-  // Buscar en artículos de ley
+  // Función auxiliar para determinar matcheos
+  const checkMatches = (text, exactKeys = []) => {
+    const rel = calcularRelevancia(consulta, text);
+    const hasExactKey = exactKeys.some(k => k && consultaLower.includes(k.toLowerCase()));
+    const includesQuery = text.includes(consultaLower);
+    return {
+      matches: includesQuery || hasExactKey || rel >= 0.25,
+      rel: rel + (hasExactKey ? 0.4 : 0)
+    };
+  };
+
+  // 1. Buscar en artículos de ley (Estático)
   for (const [key, articulo] of Object.entries(LEY_SEGURO_SOCIAL)) {
     const contenidoLower = (articulo.contenido + articulo.titulo).toLowerCase();
-    if (contenidoLower.includes(consultaLower) ||
-        consultaLower.includes(key.replace('_', ' '))) {
+    const { matches, rel } = checkMatches(contenidoLower, [key.replace('_', ' ')]);
+
+    if (matches) {
       resultados.push({
         tipo: 'articulo',
         referencia: `Artículo ${articulo.articulo}`,
         titulo: articulo.titulo,
         contenido: articulo.contenido,
-        relevancia: calcularRelevancia(consulta, contenidoLower)
+        relevancia: rel
       });
     }
   }
 
-  // Buscar en preguntas frecuentes
+  // 2. Buscar en preguntas frecuentes (Estático)
   for (const faq of PREGUNTAS_FRECUENTES) {
     const faqLower = (faq.pregunta + faq.respuesta).toLowerCase();
-    if (faqLower.includes(consultaLower)) {
+    const { matches, rel } = checkMatches(faqLower);
+
+    if (matches) {
       resultados.push({
         tipo: 'faq',
         pregunta: faq.pregunta,
         respuesta: faq.respuesta,
-        referencia: faq.articulo_relacionado,
-        relevancia: calcularRelevancia(consulta, faqLower)
+        referencia: faq.articulo_relacionado || 'FAQ General',
+        relevancia: rel
       });
     }
+  }
+
+  // 3. Buscar en Entrenamiento Dinámico (FAQs y Conocimiento)
+  try {
+    const trainingData = training.obtenerTraining();
+
+    // Buscar en FAQs dinámicas
+    if (trainingData.faq && trainingData.faq.length > 0) {
+      trainingData.faq.filter(f => f.activo).forEach(f => {
+        const text = (f.pregunta + f.respuesta + (f.palabrasClave || []).join(' ')).toLowerCase();
+        const { matches, rel } = checkMatches(text, f.palabrasClave || []);
+
+        if (matches) {
+          resultados.push({
+            tipo: 'faq',
+            pregunta: f.pregunta,
+            respuesta: f.respuesta,
+            referencia: 'Entrenamiento Personalizado',
+            relevancia: rel + 0.1 // Priorizar un poco el entrenamiento del usuario
+          });
+        }
+      });
+    }
+
+    // Buscar en Conocimiento dinámico
+    if (trainingData.conocimiento && trainingData.conocimiento.length > 0) {
+      trainingData.conocimiento.filter(c => c.activo).forEach(c => {
+        const text = (c.titulo + c.contenido + c.categoria).toLowerCase();
+        const { matches, rel } = checkMatches(text, [c.titulo]);
+
+        if (matches) {
+          resultados.push({
+            tipo: 'articulo',
+            referencia: `Conocimiento: ${c.categoria}`,
+            titulo: c.titulo,
+            contenido: c.contenido,
+            relevancia: rel + 0.1
+          });
+        }
+      });
+    }
+  } catch (e) {
+    console.error('Error integrando RAG dinámico:', e.message);
   }
 
   // Ordenar por relevancia
@@ -741,7 +800,9 @@ export function buscarEnBaseConocimiento(consulta) {
 }
 
 function calcularRelevancia(consulta, texto) {
-  const palabras = consulta.toLowerCase().split(' ');
+  const palabras = consulta.toLowerCase().split(/[ \.,\?\!]+/).filter(p => p.length > 3);
+  if (palabras.length === 0) return 0;
+
   let score = 0;
   for (const palabra of palabras) {
     if (texto.includes(palabra)) score += 1;
