@@ -1906,10 +1906,13 @@ function CRM() {
       )}
 
       {/* ==================== NOTIFICACIONES ==================== */}
-      {vista === 'notificaciones' && (
+      {vista === 'notificaciones' && !subVista && (
         <div className="crm-notificaciones">
           <div className="vista-header">
             <h2>📱 Notificaciones y Recordatorios</h2>
+            <button className="btn-primary" onClick={() => setSubVista('crear-agente')} style={{ backgroundColor: '#2563eb' }}>
+              🤖💼 Crear Agente de Voz
+            </button>
           </div>
 
           {/* Recordatorios de pago */}
