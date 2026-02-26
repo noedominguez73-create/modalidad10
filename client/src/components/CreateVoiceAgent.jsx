@@ -151,34 +151,34 @@ const CreateVoiceAgent = ({ onBack }) => {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Voz</label>
-                            <div className="relative">
+                            <div className="relative flex items-center">
                                 <select
                                     name="voz"
                                     value={formData.voz}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none focus:ring-2 focus:ring-blue-600 outline-none text-sm"
+                                    className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none focus:ring-2 focus:ring-blue-600 outline-none text-sm z-10 bg-transparent"
                                 >
                                     <option value="Alloy">Alloy (Neutral)</option>
                                     <option value="Echo">Echo (Calm)</option>
                                     <option value="Fable">Fable (Storyteller)</option>
                                 </select>
-                                <span className="material-icons-outlined absolute right-3 top-3.5 text-slate-400 pointer-events-none text-sm">expand_more</span>
+                                <span className="material-icons-outlined absolute right-3 text-slate-400 pointer-events-none text-xl z-0">expand_more</span>
                             </div>
                         </div>
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Idioma</label>
-                            <div className="relative">
+                            <div className="relative flex items-center">
                                 <select
                                     name="idioma"
                                     value={formData.idioma}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none focus:ring-2 focus:ring-blue-600 outline-none text-sm"
+                                    className="w-full pl-4 pr-10 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl appearance-none focus:ring-2 focus:ring-blue-600 outline-none text-sm z-10 bg-transparent"
                                 >
                                     <option>Español (México)</option>
                                     <option>English (US)</option>
                                     <option>Português (Brasil)</option>
                                 </select>
-                                <span className="material-icons-outlined absolute right-3 top-3.5 text-slate-400 pointer-events-none text-sm">expand_more</span>
+                                <span className="material-icons-outlined absolute right-3 text-slate-400 pointer-events-none text-xl z-0">expand_more</span>
                             </div>
                         </div>
                     </div>
