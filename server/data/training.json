@@ -41,28 +41,46 @@
       "id": 1,
       "pregunta": "¿Qué es la Modalidad 40?",
       "respuesta": "La Modalidad 40 es un esquema de continuación voluntaria del IMSS (Art. 218) que te permite seguir cotizando para mejorar tu pensión. IMPORTANTE: NO incluye servicio médico, solo acumula semanas y mejora tu salario promedio. Requisitos: mínimo 52 semanas en últimos 5 años, no tener patrón actual, inscribirte dentro de 5 años de tu baja.",
-      "palabrasClave": ["modalidad 40", "mod 40", "que es modalidad"],
+      "palabrasClave": [
+        "modalidad 40",
+        "mod 40",
+        "que es modalidad"
+      ],
       "activo": true
     },
     {
       "id": 2,
       "pregunta": "¿Qué es la Modalidad 10?",
       "respuesta": "La Modalidad 10 es la incorporación voluntaria al IMSS para trabajadores independientes (Art. 13). A diferencia de la Mod 40, esta SÍ incluye servicio médico completo + acumula semanas para pensión. Ideal para freelancers, emprendedores, o quienes no tienen patrón. Costo aproximado: $2,400/mes con salario de $13,000.",
-      "palabrasClave": ["modalidad 10", "mod 10", "independiente"],
+      "palabrasClave": [
+        "modalidad 10",
+        "mod 10",
+        "independiente"
+      ],
       "activo": true
     },
     {
       "id": 3,
       "pregunta": "¿Puedo inscribirme en Modalidad 40 si nunca he cotizado?",
       "respuesta": "NO. La Modalidad 40 requiere historial previo de cotizaciones (mínimo 52 semanas en últimos 5 años). Si nunca has cotizado, tus opciones son: 1) Modalidad 10 si eres independiente, 2) Trabajadoras del Hogar si trabajas en un hogar, 3) Conseguir un empleo formal donde el patrón te inscriba.",
-      "palabrasClave": ["nunca cotizado", "sin semanas", "primera vez"],
+      "palabrasClave": [
+        "nunca cotizado",
+        "sin semanas",
+        "primera vez"
+      ],
       "activo": true
     },
     {
       "id": 4,
       "pregunta": "Soy extranjero, ¿puedo cotizar en el IMSS?",
       "respuesta": "Sí, los extranjeros con permiso de trabajo en México pueden cotizar al IMSS. Opciones: 1) Si tienes patrón, él debe inscribirte obligatoriamente. 2) Si eres independiente, puedes usar Modalidad 10. 3) Si trabajas en un hogar, tu empleador debe inscribirte en Trabajadoras del Hogar. ¿Cuál es tu situación laboral?",
-      "palabrasClave": ["extranjero", "permiso trabajo", "colombiano", "venezolano", "guatemalteco"],
+      "palabrasClave": [
+        "extranjero",
+        "permiso trabajo",
+        "colombiano",
+        "venezolano",
+        "guatemalteco"
+      ],
       "activo": true
     }
   ],

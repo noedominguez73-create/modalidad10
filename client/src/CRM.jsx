@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import TwilioPhone from './components/TwilioPhone'
+import CreateVoiceAgent from './components/CreateVoiceAgent'
 
 function CRM() {
   const [vista, setVista] = useState('dashboard')
@@ -600,6 +601,13 @@ function CRM() {
       )}
 
       {loading && <div className="crm-loading">⏳ Cargando...</div>}
+
+      {/* ==================== CREAR AGENTE VOZ ==================== */}
+      {vista === 'notificaciones' && subVista === 'crear-agente' && (
+        <div className="absolute inset-0 z-50 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
+          <CreateVoiceAgent onBack={() => { setVista('notificaciones'); setSubVista(null); }} />
+        </div>
+      )}
 
       {/* ==================== DASHBOARD ==================== */}
       {vista === 'dashboard' && dashboard && (

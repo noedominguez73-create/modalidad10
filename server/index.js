@@ -10,6 +10,7 @@ import db from './database.js';
 import feedback from './feedback.js';
 import settings from './settings.js';
 import crm from './crm/index.js';
+import agentesVoz from './crm/agentes-voz.js';
 import training from './training.js';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -701,6 +702,43 @@ app.post('/api/twilio/procesar-voz', async (req, res) => {
   } catch (err) {
     console.error('❌ Error en handleVoiceInput:', err);
     res.status(500).send('Error procesando voz');
+  }
+});
+
+// --- GESTIÓN DE AGENTES DE VOZ ---
+app.get('/api/agentes', (req, res) => {
+  try {
+    const agentes = agentesVoz.obtenerAgentes();
+    res.json({ success: true, count: agentes.length, data: agentes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/agentes', (req, res) => {
+  try {
+    const nuevoAgente = agentesVoz.crearAgente(req.body);
+    res.status(201).json({ success: true, data: nuevoAgente });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/agentes/:id', (req, res) => {
+  try {
+    const agenteActualizado = agentesVoz.actualizarAgente(req.params.id, req.body);
+    res.json({ success: true, data: agenteActualizado });
+  } catch (error) {
+    res.status(404).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/agentes/:id', (req, res) => {
+  try {
+    agentesVoz.eliminarAgente(req.params.id);
+    res.json({ success: true, message: 'Agente eliminado exitosamente' });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 

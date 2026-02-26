@@ -1255,35 +1255,35 @@ function App() {
               <div className="provider-section">
                 <h4>Cerebro (LLM)</h4>
                 <div className="provider-grid">
-                  <div className={`provider-item ${serviciosStatus.gemini ? 'available' : 'unavailable'}`}>
+                  <div className={`provider-item ${serviciosStatus.gemini ? 'available' : 'unavailable'}`} title="Env: GEMINI_API_KEY">
                     <span className="provider-icon">G</span>
                     <span className="provider-name">Gemini</span>
                     <span className={`provider-status ${serviciosStatus.gemini ? 'online' : 'offline'}`}>
                       {serviciosStatus.gemini ? 'Listo' : 'Sin API'}
                     </span>
                   </div>
-                  <div className={`provider-item ${serviciosStatus.anthropic ? 'available' : 'unavailable'}`}>
+                  <div className={`provider-item ${serviciosStatus.anthropic ? 'available' : 'unavailable'}`} title="Env: ANTHROPIC_API_KEY">
                     <span className="provider-icon">A</span>
                     <span className="provider-name">Claude</span>
                     <span className={`provider-status ${serviciosStatus.anthropic ? 'online' : 'offline'}`}>
                       {serviciosStatus.anthropic ? 'Listo' : 'Sin API'}
                     </span>
                   </div>
-                  <div className={`provider-item ${serviciosStatus.groq ? 'available' : 'unavailable'}`}>
+                  <div className={`provider-item ${serviciosStatus.groq ? 'available' : 'unavailable'}`} title="Env: GROQ_API_KEY">
                     <span className="provider-icon">Q</span>
                     <span className="provider-name">Groq</span>
                     <span className={`provider-status ${serviciosStatus.groq ? 'online' : 'offline'}`}>
                       {serviciosStatus.groq ? 'Listo' : 'Sin API'}
                     </span>
                   </div>
-                  <div className={`provider-item ${serviciosStatus.openai ? 'available' : 'unavailable'}`}>
+                  <div className={`provider-item ${serviciosStatus.openai ? 'available' : 'unavailable'}`} title="Env: OPENAI_API_KEY">
                     <span className="provider-icon">O</span>
                     <span className="provider-name">OpenAI</span>
                     <span className={`provider-status ${serviciosStatus.openai ? 'online' : 'offline'}`}>
                       {serviciosStatus.openai ? 'Listo' : 'Sin API'}
                     </span>
                   </div>
-                  <div className={`provider-item ${serviciosStatus.glm5 ? 'available' : 'unavailable'}`}>
+                  <div className={`provider-item ${serviciosStatus.glm5 ? 'available' : 'unavailable'}`} title="Env: GLM_API_KEY">
                     <span className="provider-icon">Z</span>
                     <span className="provider-name">GLM-5</span>
                     <span className={`provider-status ${serviciosStatus.glm5 ? 'online' : 'offline'}`}>
@@ -1846,15 +1846,28 @@ function App() {
                       const titulo = document.getElementById('regla-titulo').value
                       const contenido = document.getElementById('regla-contenido').value
                       if (!titulo || !contenido) return setTrainingMsg('Completa todos los campos')
-                      await fetch('/api/training/reglas', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ titulo, contenido })
-                      })
-                      document.getElementById('regla-titulo').value = ''
-                      document.getElementById('regla-contenido').value = ''
-                      setTrainingMsg('Regla agregada')
-                      cargarTraining()
+
+                      setTrainingMsg('Guardando...')
+                      try {
+                        const res = await fetch('/api/training/reglas', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ titulo, contenido })
+                        })
+
+                        if (res.ok) {
+                          document.getElementById('regla-titulo').value = ''
+                          document.getElementById('regla-contenido').value = ''
+                          setTrainingMsg('Regla agregada con éxito')
+                          cargarTraining()
+                        } else {
+                          const err = await res.json()
+                          setTrainingMsg(`Error: ${err.error || 'No se pudo guardar'}`)
+                        }
+                      } catch (e) {
+                        setTrainingMsg('Error de conexión con el servidor')
+                      }
+
                       setTimeout(() => setTrainingMsg(''), 3000)
                     }}
                   >
@@ -1923,15 +1936,28 @@ function App() {
                       const pregunta = document.getElementById('faq-pregunta').value
                       const respuesta = document.getElementById('faq-respuesta').value
                       if (!pregunta || !respuesta) return setTrainingMsg('Completa todos los campos')
-                      await fetch('/api/training/faq', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ pregunta, respuesta })
-                      })
-                      document.getElementById('faq-pregunta').value = ''
-                      document.getElementById('faq-respuesta').value = ''
-                      setTrainingMsg('FAQ agregada')
-                      cargarTraining()
+
+                      setTrainingMsg('Guardando...')
+                      try {
+                        const res = await fetch('/api/training/faq', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ pregunta, respuesta })
+                        })
+
+                        if (res.ok) {
+                          document.getElementById('faq-pregunta').value = ''
+                          document.getElementById('faq-respuesta').value = ''
+                          setTrainingMsg('FAQ agregada con éxito')
+                          cargarTraining()
+                        } else {
+                          const err = await res.json()
+                          setTrainingMsg(`Error: ${err.error || 'No se pudo guardar'}`)
+                        }
+                      } catch (e) {
+                        setTrainingMsg('Error de conexión con el servidor')
+                      }
+
                       setTimeout(() => setTrainingMsg(''), 3000)
                     }}
                   >
@@ -2008,15 +2034,28 @@ function App() {
                       const titulo = document.getElementById('conocimiento-titulo').value
                       const contenido = document.getElementById('conocimiento-contenido').value
                       if (!titulo || !contenido) return setTrainingMsg('Completa todos los campos')
-                      await fetch('/api/training/conocimiento', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ categoria, titulo, contenido })
-                      })
-                      document.getElementById('conocimiento-titulo').value = ''
-                      document.getElementById('conocimiento-contenido').value = ''
-                      setTrainingMsg('Conocimiento agregado')
-                      cargarTraining()
+
+                      setTrainingMsg('Guardando...')
+                      try {
+                        const res = await fetch('/api/training/conocimiento', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ categoria, titulo, contenido })
+                        })
+
+                        if (res.ok) {
+                          document.getElementById('conocimiento-titulo').value = ''
+                          document.getElementById('conocimiento-contenido').value = ''
+                          setTrainingMsg('Conocimiento agregado con éxito')
+                          cargarTraining()
+                        } else {
+                          const err = await res.json()
+                          setTrainingMsg(`Error: ${err.error || 'No se pudo guardar'}`)
+                        }
+                      } catch (e) {
+                        setTrainingMsg('Error de conexión con el servidor')
+                      }
+
                       setTimeout(() => setTrainingMsg(''), 3000)
                     }}
                   >
@@ -2094,16 +2133,29 @@ function App() {
                       const usuarioDice = document.getElementById('ejemplo-usuario').value
                       const agenteResponde = document.getElementById('ejemplo-agente').value
                       if (!contexto || !usuarioDice || !agenteResponde) return setTrainingMsg('Completa todos los campos')
-                      await fetch('/api/training/ejemplos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contexto, usuarioDice, agenteResponde })
-                      })
-                      document.getElementById('ejemplo-contexto').value = ''
-                      document.getElementById('ejemplo-usuario').value = ''
-                      document.getElementById('ejemplo-agente').value = ''
-                      setTrainingMsg('Ejemplo agregado')
-                      cargarTraining()
+
+                      setTrainingMsg('Guardando...')
+                      try {
+                        const res = await fetch('/api/training/ejemplos', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ contexto, usuarioDice, agenteResponde })
+                        })
+
+                        if (res.ok) {
+                          document.getElementById('ejemplo-contexto').value = ''
+                          document.getElementById('ejemplo-usuario').value = ''
+                          document.getElementById('ejemplo-agente').value = ''
+                          setTrainingMsg('Ejemplo agregado con éxito')
+                          cargarTraining()
+                        } else {
+                          const err = await res.json()
+                          setTrainingMsg(`Error: ${err.error || 'No se pudo guardar'}`)
+                        }
+                      } catch (e) {
+                        setTrainingMsg('Error de conexión con el servidor')
+                      }
+
                       setTimeout(() => setTrainingMsg(''), 3000)
                     }}
                   >
@@ -2201,16 +2253,29 @@ function App() {
                   <button
                     className="submit-btn"
                     onClick={async () => {
-                      await fetch('/api/training/configuracion', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(trainingData.configuracion || {})
-                      })
-                      setTrainingMsg('Configuracion guardada')
+                      setTrainingMsg('Guardando configuración...')
+                      try {
+                        const res = await fetch('/api/training/configuracion', {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(trainingData.configuracion || {})
+                        })
+
+                        if (res.ok) {
+                          setTrainingMsg('Configuración guardada correctamente')
+                          cargarTraining()
+                        } else {
+                          const err = await res.json()
+                          setTrainingMsg(`Error: ${err.error || 'No se pudo guardar'}`)
+                        }
+                      } catch (e) {
+                        setTrainingMsg('Error de conexión con el servidor')
+                      }
+
                       setTimeout(() => setTrainingMsg(''), 3000)
                     }}
                   >
-                    Guardar Configuracion
+                    Guardar Configuración
                   </button>
                 </div>
               </div>

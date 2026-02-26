@@ -10,6 +10,7 @@ import { appendFileSync, existsSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import prospectos from '../crm/prospectos.js';
+import agentesVoz from '../crm/agentes-voz.js';
 
 // Cache de audio en memoria (para evitar regenerar el mismo audio)
 const audioCache = new Map();
@@ -205,8 +206,16 @@ export async function handleIncomingCall(req, res) {
         nombreCompleto: prospecto.nombreCompleto,
         semanasActuales: prospecto.semanasActuales,
         nss: prospecto.nss
-      } : {}
+      } : {},
+      agentId: null // Se asignará el ID del agente que responde
     });
+
+    // Obtener agente específico para este número
+    const agenteInfo = agentesVoz.obtenerAgentePorTelefono(Called || '');
+    const session = voiceSessions.get(CallSid);
+    if (session) {
+      session.agentId = agenteInfo.id;
+    }
 
     // Generar TwiML directamente
     const config = getConfig();
@@ -219,10 +228,12 @@ export async function handleIncomingCall(req, res) {
 
     const actionUrl = `${baseUrl}/api/twilio/procesar-voz`;
 
-    // Mensajes de bienvenida
-    const msgBienvenida = 'Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?';
+    // Mensajes dinámicos del agente configurado
+    const msgBienvenida = agenteInfo.saludo || 'Hola, ¿en qué puedo ayudarte?';
     const msgEscucho = 'Te escucho.';
     const msgNoEscuche = 'No escuché nada. Si necesitas ayuda, vuelve a llamar. Hasta luego.';
+    const ttsVoice = agenteInfo.voz === 'Alloy' ? 'aura-asteria-en' : 'Polly.Mia'; // TODO mapped deepgram vs polly
+    const fallbackVoice = 'Polly.Mia';
 
     let twiml;
 
@@ -253,18 +264,18 @@ export async function handleIncomingCall(req, res) {
       // Fallback a Polly
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-MX" voice="Polly.Mia">${msgBienvenida}</Say>
+  <Say language="es-MX" voice="${fallbackVoice}">${msgBienvenida}</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
-    <Say language="es-MX" voice="Polly.Mia">${msgEscucho}</Say>
+    <Say language="es-MX" voice="${fallbackVoice}">${msgEscucho}</Say>
   </Gather>
-  <Say language="es-MX" voice="Polly.Mia">${msgNoEscuche}</Say>
+  <Say language="es-MX" voice="${fallbackVoice}">${msgNoEscuche}</Say>
   <Hangup/>
 </Response>`;
 
-      console.log('📢 Usando Polly TTS (Deepgram no configurado)');
+      console.log(`📢 Usando Polly TTS (Deepgram no configurado) para agente ${agenteInfo.nombre}`);
     }
 
-    logDebug('incoming_call', { Caller, Called, CallSid, usandoDeepgram: tieneDeepgram() });
+    logDebug('incoming_call', { Caller, Called, CallSid, usingAgent: agenteInfo.nombre, usandoDeepgram: tieneDeepgram() });
 
     res.type('text/xml');
     res.send(twiml);
@@ -309,10 +320,24 @@ export async function handleVoiceInput(req, res, procesarConIA) {
   }
 
   try {
+    // Buscar la configuración del agente correcta basada en la sesión guardada
+    let systemPromptToUse = null;
+    let fallbackVoice = 'Polly.Mia';
+
+    if (session.agentId) {
+      const todosLosAgentes = agentesVoz.obtenerAgentes();
+      const ag = todosLosAgentes.find(a => a.id === session.agentId);
+      if (ag) {
+        systemPromptToUse = ag.instrucciones;
+        fallbackVoice = ag.voz === 'Alloy' ? 'Polly.Lupe' : 'Polly.Mia';
+      }
+    }
+
     // Procesar con la IA incluyendo el historial de la sesión
     const respuestaIA = await procesarConIA(speechResult, {
       canal: 'telefono',
       callSid,
+      overridePrompt: systemPromptToUse, // Pasamos el custom prompt del agente
       sesion: {
         historial: session.historial,
         datos: session.datos || {}
@@ -378,9 +403,9 @@ export async function handleVoiceInput(req, res, procesarConIA) {
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
-    <Say language="es-MX" voice="Polly.Mia">${mensajeLimpio}</Say>
+    <Say language="es-MX" voice="${fallbackVoice}">${mensajeLimpio}</Say>
   </Gather>
-  <Say language="es-MX" voice="Polly.Mia">¿Sigue ahí? ¿En qué más puedo ayudarle?</Say>
+  <Say language="es-MX" voice="${fallbackVoice}">¿Sigue ahí? ¿En qué más puedo ayudarle?</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
   </Gather>
   <Hangup/>

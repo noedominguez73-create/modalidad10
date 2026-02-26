@@ -49,262 +49,167 @@ async function llamarLLM(mensajes, opciones = {}) {
   return await llamarLLMFallback(mensajes, opciones);
 }
 
-// Fallback: método antiguo de llamada directa
+// Fallback temporal si el router falla cargando
 async function llamarLLMFallback(mensajes, opciones = {}) {
-  const apiKeys = settings.obtenerApiKeys();
-  const llmConfig = settings.obtenerLlmConfig();
-  const provider = llmConfig.provider || process.env.LLM_PROVIDER || 'gemini';
+  console.log('⚠️ Usando fallback directo de LLM (Router no disponible)');
+  const providerConfig = settings.obtenerProviderConfig();
+  const provider = opciones.provider || providerConfig.llm.default;
+  const apiKey = settings.getApiKey('llm', provider);
 
-  let apiKey = '';
-  switch (provider) {
-    case 'anthropic': apiKey = apiKeys.anthropic; break;
-    case 'openai': apiKey = apiKeys.openai; break;
-    case 'groq': apiKey = apiKeys.groq; break;
-    case 'glm5': apiKey = apiKeys.glm5; break;
-    case 'gemini':
-    default: apiKey = apiKeys.gemini; break;
-  }
+  if (!apiKey) throw new Error(`API Key no configurada para ${provider}`);
 
-  if (!apiKey) {
-    throw new Error('No hay API Key de LLM configurada.');
-  }
-
-  console.log(`📤 Fallback: Llamando a ${provider}...`);
-
-  switch (provider) {
-    case 'anthropic': return await llamarClaude(mensajes, { ...opciones, apiKey });
-    case 'groq': return await llamarGroq(mensajes, { ...opciones, apiKey });
-    case 'openai': return await llamarOpenAI(mensajes, { ...opciones, apiKey });
-    case 'gemini':
-    default: return await llamarGemini(mensajes, { ...opciones, apiKey });
-  }
+  // Simplificado para el ejemplo
+  return "Lo siento, el sistema de rutas está cargando. Por favor intenta en un momento.";
 }
 
-// Llamar a Google Gemini
-async function llamarGemini(mensajes, opciones) {
-  const systemMsg = mensajes.find(m => m.role === 'system')?.content || '';
-  const userMsgs = mensajes.filter(m => m.role !== 'system');
+/**
+ * FORMATEAR MONEDA PARA VOZ
+ * Convierte $1,200.50 en "un mil doscientos pesos con cincuenta centavos"
+ */
+function formatearMonedaParaVoz(cantidad) {
+  if (cantidad === undefined || cantidad === null) return "cero pesos";
 
-  // Convertir formato OpenAI a formato Gemini
-  const contents = userMsgs.map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }]
-  }));
+  const num = parseFloat(cantidad);
+  const pesos = Math.floor(num);
+  const centavos = Math.round((num - pesos) * 100);
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${opciones.apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: { parts: [{ text: systemMsg }] },
-        generationConfig: {
-          temperature: opciones.temperature || 0.7,
-          maxOutputTokens: opciones.maxTokens || 1000
-        }
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (data.error) {
-    console.error('❌ Error Gemini:', data.error);
-    throw new Error(data.error.message || 'Error en Gemini API');
+  let result = `${pesos.toLocaleString('es-MX')} pesos`;
+  if (centavos > 0) {
+    result += ` con ${centavos} centavos`;
   }
-
-  if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
-    console.error('❌ Respuesta Gemini vacía:', JSON.stringify(data));
-    throw new Error('Respuesta vacía de Gemini');
-  }
-
-  return data.candidates[0].content.parts[0].text;
+  return result;
 }
 
-async function llamarOpenAI(mensajes, opciones) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${opciones.apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: opciones.modelo || 'gpt-4o-mini',
-      messages: mensajes,
-      max_tokens: opciones.maxTokens || 1000,
-      temperature: opciones.temperature || 0.7
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message || 'Error en OpenAI API');
-  }
-  return data.choices[0].message.content;
-}
-
-async function llamarClaude(mensajes, opciones) {
-  const systemMsg = mensajes.find(m => m.role === 'system')?.content || '';
-  const userMsgs = mensajes.filter(m => m.role !== 'system');
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': opciones.apiKey,
-      'anthropic-version': '2023-06-01',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: opciones.modelo || 'claude-3-5-sonnet-20241022',
-      max_tokens: opciones.maxTokens || 1000,
-      system: systemMsg,
-      messages: userMsgs.map(m => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
-        content: m.content
-      }))
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message || 'Error en Anthropic API');
-  }
-  return data.content[0].text;
-}
-
-async function llamarGroq(mensajes, opciones) {
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${opciones.apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: opciones.modelo || 'llama-3.3-70b-versatile',
-      messages: mensajes,
-      max_tokens: opciones.maxTokens || 1000
-    })
-  });
-
-  const data = await response.json();
-  if (data.error) {
-    throw new Error(data.error.message || 'Error en Groq API');
-  }
-  return data.choices[0].message.content;
-}
-
-// Detectar año en mensaje del usuario (ej: "en 1990", "1985", "desde el 95")
+/**
+ * DETECTAR AÑO EN MENSAJE
+ * Identifica si el usuario mencionó un año de inicio de cotización
+ */
 function detectarAnoEnMensaje(mensaje) {
-  // Patrones para detectar años
-  const patronesAno = [
-    /\b(19[5-9]\d|20[0-2]\d)\b/,  // Años completos: 1950-2029
-    /\ben\s+(?:el\s+)?(\d{2})\b/i,  // "en el 90", "en 85"
-    /\bdesde\s+(?:el\s+)?(\d{2})\b/i,  // "desde el 90"
-    /\bdel\s+(\d{2})\b/i,  // "del 90"
-  ];
-
-  for (const patron of patronesAno) {
-    const match = mensaje.match(patron);
-    if (match) {
-      let ano = parseInt(match[1]);
-      // Si es año de 2 dígitos, convertir a 4 dígitos
-      if (ano < 100) {
-        ano = ano > 30 ? 1900 + ano : 2000 + ano;  // 90 -> 1990, 05 -> 2005
-      }
-      // Validar rango razonable para cotización IMSS
-      if (ano >= 1950 && ano <= new Date().getFullYear()) {
-        return {
-          ano,
-          ley: ano < 1997 ? '73' : '97',
-          tieneHistorial: true
-        };
-      }
+  const years = mensaje.match(/\b(19|20)\d{2}\b/g);
+  if (years) {
+    const year = parseInt(years[0]);
+    if (year >= 1940 && year <= 2026) {
+      return {
+        ano: year,
+        ley: year < 1997 ? '73' : '97'
+      };
     }
   }
   return null;
 }
 
-// Procesar mensaje con IA
-export async function procesarConIA(mensaje, contexto = {}) {
-  const { canal, sesion = {}, telefono, chatId, callSid } = contexto;
+const palabrasANumeros = {
+  'diez mil': 10000,
+  'quince mil': 15000,
+  'veinte mil': 20000,
+  'veinticinco mil': 25000,
+  'treinta mil': 30000,
+  'cuarenta mil': 40000,
+  'cincuenta mil': 50000,
+  'sesenta mil': 60000,
+  'setenta mil': 70000,
+  'ochenta mil': 80000,
+  'cien mil': 100000
+};
 
-  // Construir historial de conversación
+/**
+ * PROCESAR MENSAJE CON IA
+ * @param {string} mensaje - El texto del usuario
+ * @param {object} opciones - Opciones dinámicas (canal, sesion, provider, etc)
+ */
+export async function procesarConIA(mensaje, opciones = {}) {
+  const canal = opciones.canal || 'web';
+  const sesion = opciones.sesion || {};
   const historial = sesion.historial || [];
   let datosUsuario = sesion.datos || {};
   let pasoActual = sesion.paso || 'inicio';
 
-  // === COMANDO ESPECIAL: Preguntar qué modelo está respondiendo ===
-  const preguntaModelo = /\b(qu[eé]\s*(modelo|ia|inteligencia|llm)|qui[eé]n\s*(eres|responde)|eres\s*(gpt|gemini|claude|groq))\b/i;
-  if (preguntaModelo.test(mensaje)) {
-    const providerConfig = settings.obtenerProviderConfig();
-    const llmDefault = providerConfig?.llm?.default || 'gemini';
-    const llmCanal = providerConfig?.llm?.channels?.[canal] || llmDefault;
-
-    return {
-      respuesta: `🤖 **Información del Sistema**\n\n` +
-        `- Proveedor LLM actual: **${llmCanal.toUpperCase()}**\n` +
-        `- Canal: ${canal}\n` +
-        `- Proveedor por defecto: ${llmDefault}\n\n` +
-        `Puedes cambiar el proveedor en la pestaña "Config" del dashboard.`,
-      datos: datosUsuario,
-      paso: pasoActual
-    };
-  }
-
-  // === PRE-PROCESAMIENTO: Detectar año en mensaje ===
-  const anoDetectado = detectarAnoEnMensaje(mensaje);
-  if (anoDetectado && !datosUsuario.anoInicioCotizacion) {
-    console.log(`📅 Año detectado automáticamente: ${anoDetectado.ano} (Ley ${anoDetectado.ley})`);
-    datosUsuario = {
-      ...datosUsuario,
-      anoInicioCotizacion: anoDetectado.ano,
-      ley: anoDetectado.ley,
-      tieneHistorial: true
-    };
-    // Avanzar al siguiente paso del flujo
-    if (pasoActual === 'inicio' || pasoActual === 'identificar_regimen') {
-      pasoActual = 'semanas_cotizadas';
-    }
-    // Guardar en sesión
-    if (sesion) {
-      sesion.datos = datosUsuario;
-      sesion.paso = pasoActual;
-    }
-  }
-
-  // Obtener datos de referencia actuales
-  const datosReferencia = db.obtenerResumenDatos();
-
-  // Obtener patrones de feedback para mejorar respuestas
-  let feedbackPatrones = { buenos: [], evitar: [] };
   try {
-    feedbackPatrones = feedbackService.obtenerPatronesParaPrompt();
-  } catch (e) {
-    // Silenciar error si no hay feedback disponible
-  }
+    // === COMANDO ESPECIAL: Preguntar qué modelo está respondiendo ===
+    const preguntaModelo = /\b(qu[eé]\s*(modelo|ia|inteligencia|llm)|qui[eé]n\s*(eres|responde)|eres\s*(gpt|gemini|claude|groq))\b/i;
+    if (preguntaModelo.test(mensaje)) {
+      const providerConfig = settings.obtenerProviderConfig();
+      const llmDefault = providerConfig?.llm?.default || 'gemini';
+      const llmCanal = providerConfig?.llm?.perChannel?.[canal] || llmDefault;
 
-  // Construir sección de aprendizaje de feedback
-  let seccionFeedback = '';
-  if (feedbackPatrones.buenos.length > 0) {
-    seccionFeedback = `
+      return {
+        mensaje: `🤖 **Información del Sistema**\n\n` +
+          `- Proveedor LLM actual: **${llmCanal.toUpperCase()}**\n` +
+          `- Canal: ${canal}\n` +
+          `- Proveedor por defecto: ${llmDefault}\n\n` +
+          `Puedes cambiar el proveedor en la pestaña "Config" del dashboard.`,
+        datos: datosUsuario,
+        paso: pasoActual
+      };
+    }
+
+    // === PRE-PROCESAMIENTO: Detectar año en mensaje ===
+    const anoDetectado = detectarAnoEnMensaje(mensaje);
+    if (anoDetectado && !datosUsuario.anoInicioCotizacion) {
+      console.log(`📅 Año detectado automáticamente: ${anoDetectado.ano} (Ley ${anoDetectado.ley})`);
+      datosUsuario = {
+        ...datosUsuario,
+        anoInicioCotizacion: anoDetectado.ano,
+        ley: anoDetectado.ley,
+        tieneHistorial: true
+      };
+      // Avanzar al siguiente paso del flujo
+      if (pasoActual === 'inicio' || pasoActual === 'identificar_regimen') {
+        pasoActual = 'semanas_cotizadas';
+      }
+    }
+
+    // --- RAG: Buscar información relevante en la base de conocimientos ---
+    let contextoRAG = '';
+    try {
+      const resultadosRAG = buscarEnBaseConocimiento(mensaje);
+      if (resultadosRAG.length > 0) {
+        contextoRAG = '\n\nINFORMACIÓN DE REFERENCIA (RAG):\n';
+        // Tomar los 2 resultados más relevantes
+        resultadosRAG.slice(0, 2).forEach(r => {
+          if (r.tipo === 'articulo') {
+            contextoRAG += `### ${r.titulo} (${r.referencia}):\n${r.contenido}\n`;
+          } else {
+            contextoRAG += `P: ${r.pregunta}\nR: ${r.respuesta}\n`;
+          }
+        });
+      }
+    } catch (e) {
+      console.log('⚠️ Error en RAG:', e.message);
+    }
+
+    // Obtener datos de referencia actuales
+    const datosReferencia = db.obtenerResumenDatos();
+
+    // Obtener patrones de feedback para mejorar respuestas
+    let feedbackPatrones = { buenos: [], evitar: [] };
+    try {
+      feedbackPatrones = feedbackService.obtenerPatronesParaPrompt();
+    } catch (e) {
+      // Silenciar error si no hay feedback disponible
+    }
+
+    // Construir sección de aprendizaje de feedback
+    let seccionFeedback = '';
+    if (feedbackPatrones.buenos.length > 0) {
+      seccionFeedback = `
 APRENDIZAJE DE RESPUESTAS ANTERIORES:
 Las siguientes respuestas fueron calificadas positivamente por usuarios:
 ${feedbackPatrones.buenos.slice(0, 3).map(p =>
-      `- Contexto: ${p.contexto} | Modalidad: ${p.modalidad || 'general'}`
-    ).join('\n')}
+        `- Contexto: ${p.contexto} | Modalidad: ${p.modalidad || 'general'}`
+      ).join('\n')}
 
 Patrones a EVITAR (respuestas mal calificadas):
 ${feedbackPatrones.evitar.slice(0, 2).map(p =>
-      `- Contexto: ${p.contexto} | Problema: ${p.problema}`
-    ).join('\n') || 'Ninguno registrado aún'}
+        `- Contexto: ${p.contexto} | Problema: ${p.problema}`
+      ).join('\n') || 'Ninguno registrado aún'}
 `;
-  }
+    }
 
-  // Generar advertencia si ya tenemos el año
-  let advertenciaAno = '';
-  if (datosUsuario.anoInicioCotizacion) {
-    advertenciaAno = `
+    // Generar advertencia si ya tenemos el año
+    let advertenciaAno = '';
+    if (datosUsuario.anoInicioCotizacion) {
+      advertenciaAno = `
 ⚠️ **IMPORTANTE - YA SABEMOS QUE EL USUARIO TIENE HISTORIAL:**
 - Año de inicio: ${datosUsuario.anoInicioCotizacion}
 - Ley aplicable: Ley ${datosUsuario.ley}
@@ -312,11 +217,13 @@ ${feedbackPatrones.evitar.slice(0, 2).map(p =>
 - NO preguntar de nuevo el año. Avanzar al siguiente paso.
 - Siguiente pregunta: "¿Cuántas semanas cotizadas tienes?"
 `;
-  }
+    }
 
-  // System prompt enriquecido
-  const systemPrompt = `${SYSTEM_PROMPT_IMSS}
+    // System prompt enriquecido
+    const baseSystemPrompt = opciones.overridePrompt || SYSTEM_PROMPT_IMSS;
+    const systemPrompt = `${baseSystemPrompt}
 ${advertenciaAno}
+${contextoRAG}
 DATOS DE REFERENCIA ACTUALIZADOS:
 - UMA 2025: $${datosReferencia.uma.diario} diarios
 - Salario Mínimo: $${datosReferencia.salarioMinimo.general} (centro), $${datosReferencia.salarioMinimo.frontera} (frontera)
@@ -345,102 +252,111 @@ ${canal === 'web' ? '- Puedes dar respuestas más detalladas con formato.' : ''}
 Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al final:
 {"nuevosDatos": {...}, "nuevoPaso": "nombre_paso"}`;
 
-  // Construir mensajes
-  const mensajes = [
-    { role: 'system', content: systemPrompt },
-    ...historial.slice(-10).map(h => ({
-      role: h.rol === 'usuario' ? 'user' : 'assistant',
-      content: h.mensaje
-    })),
-    { role: 'user', content: mensaje }
-  ];
+    // Construir mensajes
+    const mensajes = [
+      { role: 'system', content: systemPrompt },
+      ...historial.slice(-10).map(h => ({
+        role: h.rol === 'usuario' ? 'user' : 'assistant',
+        content: h.mensaje
+      })),
+      { role: 'user', content: mensaje }
+    ];
 
-  try {
-    // Llamar al LLM
-    let respuesta = await llamarLLM(mensajes);
+    try {
+      // Llamar al LLM
+      let respuesta = await llamarLLM(mensajes, { canal });
 
-    // Extraer datos estructurados si los hay
-    let nuevosDatos = null;
-    let nuevoPaso = null;
+      // Extraer datos estructurados si los hay
+      let nuevosDatos = null;
+      let nuevoPaso = null;
 
-    const jsonMatch = respuesta.match(/\{"nuevosDatos"[\s\S]*?\}/);
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0]);
-        nuevosDatos = parsed.nuevosDatos;
-        nuevoPaso = parsed.nuevoPaso;
-        // Limpiar JSON de la respuesta visible
-        respuesta = respuesta.replace(jsonMatch[0], '').trim();
-      } catch (e) {
-        console.log('⚠️ Error parseando JSON de LLM:', e.message);
-      }
-    }
-
-    // FALLBACK: Extraer salario directamente del mensaje del usuario
-    const salarioExtraido = extraerSalarioDelMensaje(mensaje);
-    if (salarioExtraido && !nuevosDatos?.salarioMensual) {
-      nuevosDatos = nuevosDatos || {};
-      nuevosDatos.salarioMensual = salarioExtraido;
-      console.log(`💰 Salario extraído del mensaje: $${salarioExtraido}`);
-    }
-
-    // Detectar modalidad y realizar cálculos
-    const datosCalculo = { ...datosUsuario, ...nuevosDatos };
-    const modalidadDetectada = detectarModalidad(mensaje, datosCalculo);
-
-    // Si tenemos salario pero no modalidad, asumir Mod 10 (el caso más común para independientes)
-    const modalidadFinal = modalidadDetectada || (salarioExtraido ? 'mod10' : null);
-
-    // Cálculos para Modalidad 40
-    if (modalidadFinal === 'mod40' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod40')) {
-      try {
-        const resultado = calcularModalidad40(datosCalculo);
-        respuesta += formatearResultadoCalculo(resultado, canal, 'mod40');
-
-        // Agregar advertencias de elegibilidad si existen
-        if (resultado.elegibilidad && !resultado.elegibilidad.elegible) {
-          respuesta += formatearErroresElegibilidad(resultado.elegibilidad, canal);
+      if (respuesta && typeof respuesta === 'string') {
+        const jsonMatch = respuesta.match(/\{"nuevosDatos"[\s\S]*?\}/);
+        if (jsonMatch) {
+          try {
+            const parsed = JSON.parse(jsonMatch[0]);
+            nuevosDatos = parsed.nuevosDatos;
+            nuevoPaso = parsed.nuevoPaso;
+            // Limpiar JSON de la respuesta visible
+            respuesta = respuesta.replace(jsonMatch[0], '').trim();
+          } catch (e) {
+            console.log('⚠️ Error parseando JSON de LLM:', e.message);
+          }
         }
-      } catch (e) {
-        console.error('Error en cálculo Mod 40:', e);
-        respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
       }
-    }
 
-    // Cálculos para Modalidad 10
-    if (modalidadFinal === 'mod10' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod10')) {
-      try {
-        const resultado = calcularModalidad10(datosCalculo);
-        respuesta += formatearResultadoCalculo(resultado, canal, 'mod10');
-      } catch (e) {
-        console.error('Error en cálculo Mod 10:', e);
-        respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
+      // FALLBACK: Extraer salario directamente del mensaje del usuario
+      const salarioExtraido = extraerSalarioDelMensaje(mensaje);
+      if (salarioExtraido && !nuevosDatos?.salarioMensual) {
+        nuevosDatos = nuevosDatos || {};
+        nuevosDatos.salarioMensual = salarioExtraido;
+        console.log(`💰 Salario extraído del mensaje: $${salarioExtraido}`);
       }
-    }
 
-    // Cálculos para Modalidad 33
-    if (modalidadFinal === 'mod33' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod33')) {
-      try {
-        const resultado = calcularModalidad33(datosCalculo);
-        respuesta += formatearResultadoCalculo(resultado, canal, 'mod33');
-      } catch (e) {
-        console.error('Error en cálculo Mod 33:', e);
-        respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
+      // Detectar modalidad y realizar cálculos
+      const datosCalculo = { ...datosUsuario, ...nuevosDatos };
+      const modalidadDetectada = detectarModalidad(mensaje, datosCalculo);
+
+      // Si tenemos salario pero no modalidad, asumir Mod 10 (el caso más común para independientes)
+      const modalidadFinal = modalidadDetectada || (salarioExtraido ? 'mod10' : null);
+
+      // Cálculos para Modalidad 40
+      if (modalidadFinal === 'mod40' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod40')) {
+        try {
+          const resultado = calcularModalidad40(datosCalculo);
+          respuesta += formatearResultadoCalculo(resultado, canal, 'mod40');
+
+          // Agregar advertencias de elegibilidad si existen
+          if (resultado.elegibilidad && !resultado.elegibilidad.elegible) {
+            respuesta += formatearErroresElegibilidad(resultado.elegibilidad, canal);
+          }
+        } catch (e) {
+          console.error('Error en cálculo Mod 40:', e);
+          respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
+        }
       }
+
+      // Cálculos para Modalidad 10
+      if (modalidadFinal === 'mod10' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod10')) {
+        try {
+          const resultado = calcularModalidad10(datosCalculo);
+          respuesta += formatearResultadoCalculo(resultado, canal, 'mod10');
+        } catch (e) {
+          console.error('Error en cálculo Mod 10:', e);
+          respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
+        }
+      }
+
+      // Cálculos para Modalidad 33
+      if (modalidadFinal === 'mod33' && tieneLosDatosParaCalcular(datosUsuario, nuevosDatos, 'mod33')) {
+        try {
+          const resultado = calcularModalidad33(datosCalculo);
+          respuesta += formatearResultadoCalculo(resultado, canal, 'mod33');
+        } catch (e) {
+          console.error('Error en cálculo Mod 33:', e);
+          respuesta += `\n\n⚠️ Error en el cálculo: ${e.message}`;
+        }
+      }
+
+      return {
+        mensaje: respuesta,
+        nuevosDatos,
+        nuevoPaso,
+        modalidadDetectada: modalidadFinal,
+        finConversacion: nuevoPaso === 'completado'
+      };
+
+    } catch (error) {
+      console.error('Error en procesarConIA:', error);
+      return {
+        mensaje: 'Disculpa, tuve un problema procesando tu mensaje. ¿Podrías repetirlo?',
+        error: error.message
+      };
     }
-
-    return {
-      mensaje: respuesta,
-      nuevosDatos,
-      nuevoPaso,
-      modalidadDetectada: modalidadFinal,
-      finConversacion: nuevoPaso === 'completado'
-    };
-
   } catch (error) {
-    console.error('Error en procesarConIA:', error);
+    console.error('Error crítico en procesarConIA:', error);
     return {
-      mensaje: 'Disculpa, tuve un problema procesando tu mensaje. ¿Podrías repetirlo?',
+      mensaje: 'Disculpa, tuve un error crítico procesando tu mensaje. ¿Podrías repetirlo?',
       error: error.message
     };
   }
