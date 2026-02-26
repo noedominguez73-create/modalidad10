@@ -85,15 +85,23 @@ function tieneDeepgram() {
 }
 
 // Generar audio con Deepgram y guardarlo en cache
-async function generarAudioDeepgram(texto, id) {
+async function generarAudioDeepgram(texto, id, voz = 'Alloy') {
   const cacheKey = `${id}_${texto.substring(0, 50)}`;
 
   if (audioCache.has(cacheKey)) {
     return audioCache.get(cacheKey);
   }
 
+  // Mapear voz de OpenAI/UI a modelos Aura de Deepgram
+  let modeloDeepgram = 'aura-2-selena-es'; // Default (Alloy/Neutral)
+  if (voz === 'Echo') {
+    modeloDeepgram = 'aura-2-javier-es'; // Male
+  } else if (voz === 'Fable') {
+    modeloDeepgram = 'aura-2-luna-es'; // Different Female (Storyteller)
+  }
+
   try {
-    const audioBuffer = await generarAudio(texto);
+    const audioBuffer = await generarAudio(texto, { modelo: modeloDeepgram });
     audioCache.set(cacheKey, audioBuffer);
     return audioBuffer;
   } catch (error) {
@@ -232,8 +240,14 @@ export async function handleIncomingCall(req, res) {
     const msgBienvenida = agenteInfo.saludo || 'Hola, ¿en qué puedo ayudarte?';
     const msgEscucho = 'Te escucho.';
     const msgNoEscuche = 'No escuché nada. Si necesitas ayuda, vuelve a llamar. Hasta luego.';
-    const ttsVoice = agenteInfo.voz === 'Alloy' ? 'aura-asteria-en' : 'Polly.Mia'; // TODO mapped deepgram vs polly
-    const fallbackVoice = 'Polly.Mia';
+
+    // Mapeo de voces AI
+    let fallbackVoice = 'Polly.Mia'; // Default (Fable/Neutral Female)
+    if (agenteInfo.voz === 'Alloy') {
+      fallbackVoice = 'Polly.Lupe'; // Neutral Female
+    } else if (agenteInfo.voz === 'Echo') {
+      fallbackVoice = 'Polly.Miguel'; // Male
+    }
 
     let twiml;
 
@@ -244,9 +258,9 @@ export async function handleIncomingCall(req, res) {
       const audioId3 = `bye_${CallSid}`;
 
       await Promise.all([
-        generarAudioDeepgram(msgBienvenida, audioId1),
-        generarAudioDeepgram(msgEscucho, audioId2),
-        generarAudioDeepgram(msgNoEscuche, audioId3)
+        generarAudioDeepgram(msgBienvenida, audioId1, agenteInfo.voz),
+        generarAudioDeepgram(msgEscucho, audioId2, agenteInfo.voz),
+        generarAudioDeepgram(msgNoEscuche, audioId3, agenteInfo.voz)
       ]);
 
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -329,7 +343,11 @@ export async function handleVoiceInput(req, res, procesarConIA) {
       const ag = todosLosAgentes.find(a => a.id === session.agentId);
       if (ag) {
         systemPromptToUse = ag.instrucciones;
-        fallbackVoice = ag.voz === 'Alloy' ? 'Polly.Lupe' : 'Polly.Mia';
+        if (ag.voz === 'Alloy') {
+          fallbackVoice = 'Polly.Lupe';
+        } else if (ag.voz === 'Echo') {
+          fallbackVoice = 'Polly.Miguel';
+        }
       }
     }
 
@@ -387,7 +405,21 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     if (tieneDeepgram()) {
       // Generar audios con Deepgram
       const audioIdResp = `resp_${callSid}_${Date.now()}`;
-      await generarAudioDeepgram(mensajeLimpio, audioIdResp);
+
+      // Obtener voz del agente para Deepgram
+      let deepgramVoiceType = 'Fable'; // Default
+      if (session.agentId) {
+        const ag = agentesVoz.obtenerAgenteStringId ? agentesVoz.obtenerAgenteStringId(session.agentId) : null;
+        if (!ag) {
+          const todosLosAgentes = agentesVoz.obtenerAgentes();
+          const foundAg = todosLosAgentes.find(a => a.id === session.agentId);
+          if (foundAg) deepgramVoiceType = foundAg.voz;
+        } else {
+          deepgramVoiceType = ag.voz;
+        }
+      }
+
+      await generarAudioDeepgram(mensajeLimpio, audioIdResp, deepgramVoiceType);
 
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -426,8 +458,9 @@ export async function handleVoiceInput(req, res, procesarConIA) {
     console.error('❌ [VOICE] Error procesando voz:', error);
     logDebug('error_voice_input', { error: error.message, stack: error.stack });
 
-    const actionUrl = obtenerActionUrl(req);
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    if (!res.headersSent) {
+      const actionUrl = obtenerActionUrl(req);
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">Disculpa, tuve un problema técnico. ¿Podrías repetir tu pregunta?</Say>
   <Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">
@@ -436,8 +469,9 @@ export async function handleVoiceInput(req, res, procesarConIA) {
   <Hangup/>
 </Response>`;
 
-    res.type('text/xml');
-    res.send(twiml);
+      res.type('text/xml');
+      res.send(twiml);
+    }
   }
 }
 
