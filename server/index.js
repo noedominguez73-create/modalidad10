@@ -679,6 +679,45 @@ app.post('/api/voice/incoming', (req, res) => {
   }
 });
 
+// Endpoint para iniciar llamada de puente (Click-to-Call) desde el CRM sin WebRTC
+app.post('/api/twilio/llamar-puente', async (req, res) => {
+  const { numeroDestino, numeroAdmin } = req.body;
+
+  if (!numeroDestino) {
+    return res.status(400).json({ success: false, error: 'Falta numeroDestino' });
+  }
+
+  if (!twilioVoice) {
+    return res.status(503).json({ success: false, error: 'Servicio de voz no disponible' });
+  }
+
+  try {
+    // Si no pasan numero de admin, usar el de WhatsApp/Voz de configuración
+    let adminPhone = numeroAdmin;
+    if (!adminPhone) {
+      const settings = await import('./settings.js');
+      const nVoz = settings.obtenerNumeroPorTipo('voz');
+      adminPhone = nVoz ? nVoz.numero : (process.env.WHATSAPP_NUMBER || '').replace('whatsapp:', '');
+    }
+
+    if (!adminPhone) {
+      return res.status(400).json({ success: false, error: 'No hay número de recepción configurado. Escribe tu teléfono en el panel.' });
+    }
+
+    console.log(`📞 Click-to-Call: Twilio llamará a Administrador (${adminPhone}) y conectará con Prospecto (${numeroDestino})`);
+    const sid = await twilioVoice.default.hacerLlamadaPuente(numeroDestino, adminPhone);
+
+    res.json({
+      success: true,
+      sid,
+      message: `Enlazando llamada... Contesta tu teléfono ${adminPhone} para hablar con el prospecto.`
+    });
+  } catch (error) {
+    console.error('❌ Error en puente de llamada:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Webhook: Procesar voz del usuario
 app.post('/api/twilio/procesar-voz', async (req, res) => {
   const { SpeechResult, CallSid, Confidence } = req.body;

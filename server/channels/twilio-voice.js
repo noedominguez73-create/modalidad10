@@ -491,6 +491,28 @@ export async function hacerLlamada(numeroDestino, mensajeInicial) {
   return call.sid;
 }
 
+// Hacer llamada puente (Click-to-Call) sin WebRTC
+export async function hacerLlamadaPuente(numeroDestino, numeroAdmin) {
+  if (!client) {
+    throw new Error('Twilio no está configurado');
+  }
+
+  const config = getConfig();
+  const VoiceResponse = twilio.twiml.VoiceResponse;
+  const twiml = new VoiceResponse();
+
+  twiml.say({ voice: 'Polly.Mia', language: 'es-MX' }, 'Conectando llamada desde el CRM. Espera por favor.');
+  twiml.dial({ callerId: config.phoneNumber }, numeroDestino);
+
+  const call = await client.calls.create({
+    twiml: twiml.toString(),
+    to: numeroAdmin,
+    from: config.phoneNumber
+  });
+
+  return call.sid;
+}
+
 // Enviar SMS
 export async function enviarSMS(numeroDestino, mensaje) {
   if (!client) {
@@ -536,6 +558,7 @@ export default {
   handleIncomingCall,
   handleVoiceInput,
   hacerLlamada,
+  hacerLlamadaPuente,
   enviarSMS,
   obtenerAudioCache
 };
