@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-const CreateVoiceAgent = ({ onBack }) => {
-    const [formData, setFormData] = useState({
+const CreateVoiceAgent = ({ onBack, agenteAEditar = null }) => {
+    const [formData, setFormData] = useState(agenteAEditar || {
         nombre: '',
         descripcion: '',
         saludo: '',
@@ -29,8 +29,11 @@ const CreateVoiceAgent = ({ onBack }) => {
         setError(null);
 
         try {
-            const response = await fetch('/api/agentes', {
-                method: 'POST',
+            const url = agenteAEditar ? `/api/agentes/${agenteAEditar.id}` : '/api/agentes';
+            const method = agenteAEditar ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method,
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -42,7 +45,7 @@ const CreateVoiceAgent = ({ onBack }) => {
             if (result.success) {
                 onBack(); // Regresar a la pantalla anterior si fue exitoso
             } else {
-                throw new Error(result.error || 'Fallo interno al crear el agente');
+                throw new Error(result.error || `Fallo interno al ${agenteAEditar ? 'actualizar' : 'crear'} el agente`);
             }
         } catch (err) {
             console.error('Error creando agente:', err);
@@ -62,13 +65,13 @@ const CreateVoiceAgent = ({ onBack }) => {
                     <span className="material-icons-outlined">chevron_left</span>
                     <span>Atrás</span>
                 </button>
-                <h1 className="text-base font-bold">Crear Agente</h1>
+                <h1 className="text-base font-bold">{agenteAEditar ? 'Editar Agente' : 'Crear Agente'}</h1>
                 <div className="w-12"></div>
             </header>
 
             <main className="max-w-md mx-auto px-5 pt-6 space-y-8">
                 <section>
-                    <h2 className="text-2xl font-bold mb-1">Crear Agente de Voz</h2>
+                    <h2 className="text-2xl font-bold mb-1">{agenteAEditar ? 'Editar Agente de Voz' : 'Crear Agente de Voz'}</h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Configura un nuevo agente de IA para atender llamadas telefónicas</p>
                 </section>
 
@@ -229,7 +232,7 @@ const CreateVoiceAgent = ({ onBack }) => {
                                     Guardando...
                                 </>
                             ) : (
-                                'Crear Agente'
+                                agenteAEditar ? 'Guardar Cambios' : 'Crear Agente'
                             )}
                         </button>
                         <button

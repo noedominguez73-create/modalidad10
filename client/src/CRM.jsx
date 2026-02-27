@@ -18,11 +18,13 @@ function CRM() {
   const [historialPagos, setHistorialPagos] = useState([])
   const [recordatorios, setRecordatorios] = useState([])
   const [clientesPagoPendiente, setClientesPagoPendiente] = useState([])
+  const [agentesVoz, setAgentesVoz] = useState([]) // IA Voice Agents
 
   // Selected items
   const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null)
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [pagoSeleccionado, setPagoSeleccionado] = useState(null)
+  const [agenteAEditar, setAgenteAEditar] = useState(null)
 
   // Forms
   const [nuevoProspecto, setNuevoProspecto] = useState({
@@ -90,6 +92,12 @@ function CRM() {
   useEffect(() => {
     cargarDashboard()
   }, [])
+
+  useEffect(() => {
+    if (vista === 'notificaciones') {
+      cargarAgentesVoz()
+    }
+  }, [vista])
 
   const mostrarMensaje = (texto, tipo = 'info') => {
     setMensaje(texto)
@@ -255,6 +263,30 @@ function CRM() {
     } catch (err) {
       console.error('Error cargando clientes:', err)
     }
+    setLoading(false)
+  }
+
+  const cargarAgentesVoz = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/agentes')
+      const data = await res.json()
+      if (data.success) setAgentesVoz(data.data)
+    } catch (err) { console.error('Error:', err) }
+    setLoading(false)
+  }
+
+  const eliminarAgenteVoz = async (id) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este agente?')) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/agentes/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        mostrarMensaje('Agente eliminado', 'success')
+        cargarAgentesVoz()
+      } else mostrarMensaje(data.error || 'Error', 'error')
+    } catch (err) { mostrarMensaje('Error de conexión', 'error') }
     setLoading(false)
   }
 
@@ -605,7 +637,15 @@ function CRM() {
       {/* ==================== CREAR AGENTE VOZ ==================== */}
       {vista === 'notificaciones' && subVista === 'crear-agente' && (
         <div className="absolute inset-0 z-50 bg-slate-50 dark:bg-slate-900 overflow-y-auto">
-          <CreateVoiceAgent onBack={() => { setVista('notificaciones'); setSubVista(null); }} />
+          <CreateVoiceAgent
+            agenteAEditar={agenteAEditar}
+            onBack={() => {
+              setVista('notificaciones');
+              setSubVista(null);
+              setAgenteAEditar(null);
+              cargarAgentesVoz(); // Recargar tras crear/editar
+            }}
+          />
         </div>
       )}
 
@@ -1910,9 +1950,59 @@ function CRM() {
         <div className="crm-notificaciones">
           <div className="vista-header">
             <h2>📱 Notificaciones y Recordatorios</h2>
-            <button className="btn-primary" onClick={() => setSubVista('crear-agente')} style={{ backgroundColor: '#2563eb' }}>
+            <button
+              className="btn-primary"
+              onClick={() => { setAgenteAEditar(null); setSubVista('crear-agente'); }}
+              style={{ backgroundColor: '#2563eb' }}
+            >
               🤖💼 Crear Agente de Voz
             </button>
+          </div>
+
+          {/* Agentes de Voz (IA) */}
+          <div className="notif-section">
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>🤖 Agentes de Voz Activos ({agentesVoz.length})</h3>
+            <div className="clientes-pendientes-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              {agentesVoz.map(agente => (
+                <div key={agente.id} className="cliente-pendiente-card bg-slate-800 border !border-slate-700">
+                  <div className="cliente-info">
+                    <span className="cliente-nombre flex items-center gap-2">
+                      {agente.nombre}
+                      {agente.telefonoActivo ? (
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-400">{agente.telefono || 'Sin asigar'}</span>
+                  </div>
+                  <div className="cliente-meta mt-2 mb-3 !text-[11px] text-slate-300">
+                    <p className="line-clamp-2">{agente.descripcion}</p>
+                    <div className="flex gap-2 mt-2">
+                      <span className="bg-slate-700 px-2 py-0.5 rounded text-[10px]">{agente.voz}</span>
+                      <span className="bg-slate-700 px-2 py-0.5 rounded text-[10px]">{agente.idioma}</span>
+                    </div>
+                  </div>
+                  <div className="cliente-actions flex justify-end gap-2 border-t border-slate-700 pt-3">
+                    <button
+                      onClick={() => { setAgenteAEditar(agente); setSubVista('crear-agente'); }}
+                      className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1"
+                    >
+                      <span className="material-icons-outlined text-sm">edit</span> Editar
+                    </button>
+                    <button
+                      onClick={() => eliminarAgenteVoz(agente.id)}
+                      className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1 ml-3"
+                    >
+                      <span className="material-icons-outlined text-sm">delete</span> Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {agentesVoz.length === 0 && (
+                <p className="empty-state text-slate-500">No hay agentes de voz creados.</p>
+              )}
+            </div>
           </div>
 
           {/* Recordatorios de pago */}
