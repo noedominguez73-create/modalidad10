@@ -97,7 +97,27 @@ function obtenerApiKeysVoz() {
 
 // ─── Generador de TwiML ───────────────────────────────────────────────
 
+/**
+ * Mapea cualquier nombre de voz (OpenAI, Deepgram, custom) a una voz Polly válida.
+ * Evita que nombres como "Alloy", "Echo", etc. lleguen al <Say> de Twilio y causen error.
+ */
+function sanitizeVoz(voz) {
+  const POLLY_VALIDAS = ['Polly.Mia', 'Polly.Lupe', 'Polly.Miguel', 'Polly.Penelope', 'Polly.Conchita'];
+  if (voz && POLLY_VALIDAS.includes(voz)) return voz;
+  // Mapeo de voces OpenAI / custom → Polly
+  const mapa = {
+    'Alloy': 'Polly.Mia',
+    'Echo': 'Polly.Miguel',
+    'Fable': 'Polly.Lupe',
+    'Onyx': 'Polly.Miguel',
+    'Nova': 'Polly.Mia',
+    'Shimmer': 'Polly.Lupe',
+  };
+  return mapa[voz] || 'Polly.Mia';
+}
+
 function twimlSay(texto, voz = 'Polly.Mia') {
+  voz = sanitizeVoz(voz);
   // Escapar caracteres especiales XML
   const escaped = texto
     .replace(/&/g, '&amp;')

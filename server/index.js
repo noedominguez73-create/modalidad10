@@ -611,20 +611,40 @@ app.get('/api/twilio/token', (req, res) => {
 });
 
 // Webhook: Llamada entrante
-app.post('/api/twilio/voice', (req, res) => {
+app.post('/api/twilio/voice', async (req, res) => {
   const { Called, Caller, CallSid } = req.body;
   console.log(`📞 [TWILIO] Llamada entrante: ${Caller} -> ${Called} (SID: ${CallSid})`);
 
+  // Si twilioVoice aún no cargó, intentar cargarlo ahora
   if (!twilioVoice) {
-    console.error('❌ Twilio Voice no está cargado en el servidor');
-    return res.status(503).type('text/plain').send('Servicio de voz no disponible temporalmente. Reintenta en unos segundos.');
+    try {
+      twilioVoice = await import('./channels/twilio-voice.js');
+      twilioVoice.default.initTwilio();
+      canalesActivos.twilio = true;
+      console.log('✓ Twilio Voice cargado on-demand');
+    } catch (e) {
+      console.error('❌ No se pudo cargar Twilio Voice:', e.message);
+      // Devolver TwiML válido (no plain text) para que Twilio no cuelgue en silencio
+      res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">Lo sentimos, el sistema no está listo. Por favor intente en unos momentos.</Say>
+  <Hangup/>
+</Response>`);
+      return;
+    }
   }
 
   try {
-    twilioVoice.default.handleIncomingCall(req, res);
+    await twilioVoice.default.handleIncomingCall(req, res);
   } catch (err) {
     console.error('❌ Error en handleIncomingCall:', err);
-    res.status(500).send('Error interno procesando llamada');
+    if (!res.headersSent) {
+      res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">Error interno. Por favor intente de nuevo.</Say>
+  <Hangup/>
+</Response>`);
+    }
   }
 });
 
