@@ -106,7 +106,9 @@ function twimlSay(texto, voz = 'Polly.Mia') {
 }
 
 function twimlGather(actionUrl, innerContent = '') {
-  return `<Gather input="speech" language="es-MX" speechTimeout="auto" action="${actionUrl}" method="POST">${innerContent}</Gather>`;
+  // IMPORTANTE: En XML, el & en URLs debe ser &amp; o Twilio rechaza el TwiML
+  const escapedUrl = actionUrl.replace(/&/g, '&amp;');
+  return `<Gather input="speech" language="es-MX" speechTimeout="auto" action="${escapedUrl}" method="POST">${innerContent}</Gather>`;
 }
 
 // ─── PASO 1: LLAMADA ENTRANTE ─────────────────────────────────────────
