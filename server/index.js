@@ -610,6 +610,18 @@ app.get('/api/twilio/token', (req, res) => {
   }
 });
 
+// ─── DIAGNÓSTICO: Endpoint ultra-simple para probar que Twilio llega al servidor ───
+app.all('/api/twilio/ping', (req, res) => {
+  console.log('🔔 [PING] Twilio llegó al servidor!', req.method, req.body);
+  res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">Conexion exitosa con asesoria IMSS. El servidor funciona correctamente.</Say>
+  <Pause length="1"/>
+  <Say language="es-MX" voice="Polly.Mia">Hasta luego.</Say>
+  <Hangup/>
+</Response>`);
+});
+
 // Webhook: Llamada entrante
 app.post('/api/twilio/voice', async (req, res) => {
   const { Called, Caller, CallSid } = req.body;
