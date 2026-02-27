@@ -1,10 +1,15 @@
 /**
  * TWILIO VOICE — Agente de Voz IA completo
  *
- * Implementa el flujo de 5 pasos:
- * 1. POST /api/twilio/voice         → handleIncomingCall  (saludo + <Gather>)
- * 2. POST /api/twilio/voice/respond → handleVoiceRespond  (STT → IA → TwiML)
- * 3. POST /api/twilio/voice/outbound→ handleOutbound      (TwiML saliente)
+ * IMPORTANTE: SIEMPRE usar Polly <Say> para TwiML.
+ * NO usar Deepgram para voz telefónica — Twilio tiene timeout de 15s
+ * y Deepgram requiere pre-generar audio ANTES de responder, lo que causa
+ * el timeout y activa el menú de fallback en inglés de Twilio.
+ *
+ * Flujo:
+ * 1. POST /api/twilio/voice         → handleIncomingCall  (saludo Polly + <Gather>)
+ * 2. POST /api/twilio/voice/respond → handleVoiceRespond  (STT → Gemini/OpenAI → Polly)
+ * 3. POST /api/twilio/voice/outbound→ handleOutbound      (TwiML saliente Polly)
  * 4. POST /api/twilio/status        → handleStatus        (actualizar BD)
  * 5. POST /api/twilio/call          → hacerLlamadaSaliente (inicia llamada via API REST)
  */
@@ -12,17 +17,10 @@
 import settings from '../settings.js';
 import agentesVoz from '../crm/agentes-voz.js';
 import callsDb from '../crm/calls-db.js';
-import { generarAudio } from './deepgram-tts.js';
-import { existsSync, writeFileSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// ─── Cache de audio Deepgram ─────────────────────────────────────────
+// ─── Cache de audio Deepgram (solo para otros canales, NO para voz telefónica) ─
 const audioCache = new Map();
-setInterval(() => audioCache.clear(), 600_000); // limpiar cada 10 min
+setInterval(() => audioCache.clear(), 600_000);
 
 export function obtenerAudioCache(id) {
   for (const [key, value] of audioCache.entries()) {
@@ -31,41 +29,22 @@ export function obtenerAudioCache(id) {
   return null;
 }
 
-async function generarAudioDeepgram(texto, id, modelo = 'aura-2-selena-es') {
-  const cacheKey = `${id}_${texto.substring(0, 50)}`;
-  if (audioCache.has(cacheKey)) return audioCache.get(cacheKey);
-  try {
-    const buf = await generarAudio(texto, { modelo });
-    audioCache.set(cacheKey, buf);
-    return buf;
-  } catch (e) {
-    console.error('❌ Error Deepgram TTS:', e.message);
-    return null;
-  }
-}
-
 // ─── Helpers de configuración ─────────────────────────────────────────
-
-let twilioClient = null;
 
 export function initTwilio() {
   const cfg = obtenerConfigTwilio();
   if (cfg.accountSid && cfg.authToken) {
-    // Carga diferida del SDK para no bloquear el inicio
-    import('twilio').then(mod => {
-      twilioClient = mod.default(cfg.accountSid, cfg.authToken);
-    }).catch(e => console.error('Error cargando SDK Twilio:', e.message));
-    console.log('✓ Twilio Voice inicializado');
+    console.log('✓ Twilio Voice inicializado (Polly TTS)');
     return true;
   }
-  console.log('⚠ Twilio Voice sin credenciales (configura desde Settings)');
+  console.log('⚠ Twilio Voice sin credenciales (configura Account SID y Auth Token en Settings)');
   return false;
 }
 
 /** Lee credenciales: primero de settings.json, luego de env vars */
 function obtenerConfigTwilio() {
-  const s = settings.obtenerTwilioFullConfig ? settings.obtenerTwilioFullConfig() : settings.obtenerTwilio();
-  return s;
+  if (settings.obtenerTwilioFullConfig) return settings.obtenerTwilioFullConfig();
+  return settings.obtenerTwilio();
 }
 
 /** Obtener BASE_URL para los webhooks — SIEMPRE debe ser una URL absoluta válida */
@@ -82,24 +61,15 @@ function obtenerBaseUrl(req) {
 
   // 2. Construir desde headers del request (Railway/proxy)
   const proto = req.headers['x-forwarded-proto'] || 'https';
-  // x-forwarded-host es más confiable detrás de un proxy que host
   const host = req.headers['x-forwarded-host'] || req.headers.host || 'asesoriaimss.io';
   return `${proto}://${host}`;
 }
 
-/** Verificar si Deepgram está disponible */
-function tieneDeepgram() {
-  const keys = settings.obtenerApiKeys();
-  return !!(keys.deepgram && keys.deepgram.length > 20);
-}
-
 /**
  * Obtener API keys de IA para el agente de voz.
- * Prioridad: settings.json → env vars
- * Gemini tiene prioridad sobre OpenAI (como especifica la arquitectura).
+ * Gemini tiene prioridad sobre OpenAI.
  */
 function obtenerApiKeysVoz() {
-  // Si existe la nueva función que lee de settings.json
   if (settings.obtenerApiKeysVoz) return settings.obtenerApiKeysVoz();
   const keys = settings.obtenerApiKeys();
   return { gemini: keys.gemini, openai: keys.openai };
@@ -108,13 +78,12 @@ function obtenerApiKeysVoz() {
 // ─── Generador de TwiML ───────────────────────────────────────────────
 
 /**
- * Mapea cualquier nombre de voz (OpenAI, Deepgram, custom) a una voz Polly válida.
- * Evita que nombres como "Alloy", "Echo", etc. lleguen al <Say> de Twilio y causen error.
+ * Mapea cualquier nombre de voz a una voz Polly válida.
+ * Evita que nombres como "Alloy", "Echo", etc. lleguen al <Say> de Twilio.
  */
 function sanitizeVoz(voz) {
   const POLLY_VALIDAS = ['Polly.Mia', 'Polly.Lupe', 'Polly.Miguel', 'Polly.Penelope', 'Polly.Conchita'];
   if (voz && POLLY_VALIDAS.includes(voz)) return voz;
-  // Mapeo de voces OpenAI / custom → Polly
   const mapa = {
     'Alloy': 'Polly.Mia',
     'Echo': 'Polly.Miguel',
@@ -128,7 +97,6 @@ function sanitizeVoz(voz) {
 
 function twimlSay(texto, voz = 'Polly.Mia') {
   voz = sanitizeVoz(voz);
-  // Escapar caracteres especiales XML
   const escaped = texto
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -164,48 +132,31 @@ export async function handleIncomingCall(req, res) {
       agent_id: agente.id
     });
 
-    const voz = agente.voz || 'Polly.Mia';
+    const voz = sanitizeVoz(agente.voz || 'Polly.Mia');
     const saludo = agente.greeting_message ||
       agente.saludo ||
       `Hola, soy ${agente.nombre}. ¿En qué puedo ayudarte?`;
 
     const actionUrl = `${baseUrl}/api/twilio/voice/respond?agent_id=${encodeURIComponent(agente.id)}&call_sid=${encodeURIComponent(CallSid)}`;
 
-    let twiml;
-
-    if (tieneDeepgram()) {
-      const audioId1 = `welcome_${CallSid}`;
-      const audioId2 = `listen_${CallSid}`;
-      const audioId3 = `bye_${CallSid}`;
-      await Promise.all([
-        generarAudioDeepgram(saludo, audioId1),
-        generarAudioDeepgram('Te escucho.', audioId2),
-        generarAudioDeepgram('No escuché nada. Hasta luego.', audioId3)
-      ]);
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Play>${baseUrl}/api/tts/${audioId1}</Play>
-  ${twimlGather(actionUrl, `<Play>${baseUrl}/api/tts/${audioId2}</Play>`)}
-  <Play>${baseUrl}/api/tts/${audioId3}</Play>
-  <Hangup/>
-</Response>`;
-    } else {
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    // SIEMPRE usar Polly <Say> — respuesta inmediata sin pre-generación de audio.
+    // Deepgram requiere await antes de responder → excede el timeout de 15s de Twilio.
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${twimlSay(saludo, voz)}
   ${twimlGather(actionUrl, twimlSay('Te escucho.', voz))}
   ${twimlSay('No escuché nada. Hasta luego.', voz)}
   <Hangup/>
 </Response>`;
-    }
 
+    console.log(`🎙️ [VOICE] Respondiendo con agente: ${agente.nombre}, voz: ${voz}`);
     res.type('text/xml').send(twiml);
 
   } catch (err) {
     console.error('💥 [VOICE] Error en handleIncomingCall:', err);
     res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say language="es-MX" voice="Polly.Mia">Lo sentimos, el sistema no está disponible en este momento. Intente más tarde.</Say>
+  <Say language="es-MX" voice="Polly.Mia">Lo sentimos, el sistema no está disponible. Intente más tarde.</Say>
   <Hangup/>
 </Response>`);
   }
@@ -226,31 +177,28 @@ export async function handleVoiceRespond(req, res) {
 
   // Si no se entendió nada
   if (!SpeechResult.trim()) {
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    return res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${twimlSay('No pude entenderte. ¿Podrías repetirlo?')}
   ${twimlGather(actionUrl)}
   ${twimlSay('Sigo sin escucharte. Hasta luego.')}
   <Hangup/>
-</Response>`;
-    return res.type('text/xml').send(twiml);
+</Response>`);
   }
 
   try {
     // Recuperar agente
     const agentes = agentesVoz.obtenerAgentes();
     const agente = agentes.find(a => a.id === agentId) || agentes[0];
-    const voz = agente?.voz || 'Polly.Mia';
+    const voz = sanitizeVoz(agente?.voz || 'Polly.Mia');
     const systemPrompt = agente?.prompt_sistema || agente?.instrucciones || '';
     const greeting = agente?.greeting_message || agente?.saludo || `Hola, soy ${agente?.nombre}.`;
 
     // Recuperar historial de transcript
     const transcript = callsDb.obtenerTranscript(callSid);
-
-    // Construir historial multi-turno desde el transcript
     const turnosAnteriores = parsearTranscript(transcript);
 
-    // Llamar a la IA (Gemini primero, luego OpenAI)
+    // Llamar a la IA (Gemini primero, luego OpenAI, luego router del proyecto)
     const apiKeys = obtenerApiKeysVoz();
     let respuestaIA = '';
 
@@ -259,7 +207,6 @@ export async function handleVoiceRespond(req, res) {
     } else if (apiKeys.openai) {
       respuestaIA = await llamarOpenAI(SpeechResult, systemPrompt, greeting, turnosAnteriores, apiKeys.openai);
     } else {
-      // Fallback: usar el router multi-proveedor del proyecto (si está disponible)
       try {
         const { routeLLM } = await import('../providers/llm-router.js');
         const mensajes = construirMensajesOpenAI(SpeechResult, systemPrompt, greeting, turnosAnteriores);
@@ -277,21 +224,10 @@ export async function handleVoiceRespond(req, res) {
     // Guardar en historial
     callsDb.agregarTranscript(callSid, SpeechResult, respuestaLimpia);
 
-    // Generar TwiML de respuesta
-    let twiml;
-    if (tieneDeepgram()) {
-      const audioId = `resp_${callSid}_${Date.now()}`;
-      await generarAudioDeepgram(respuestaLimpia, audioId);
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  ${twimlGather(actionUrl, `<Play>${baseUrl}/api/tts/${audioId}</Play>`)}
-  ${twimlSay('¿En qué más puedo ayudarte?', voz)}
-  ${twimlGather(actionUrl)}
-  ${twimlSay('Fue un placer atenderte. Hasta luego.', voz)}
-  <Hangup/>
-</Response>`;
-    } else {
-      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    console.log(`🤖 [VOICE] IA responde: "${respuestaLimpia.substring(0, 80)}..."`);
+
+    // SIEMPRE usar Polly <Say> — la IA ya tardó su tiempo, no agregar más latencia.
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${twimlGather(actionUrl, twimlSay(respuestaLimpia, voz))}
   ${twimlSay('¿En qué más puedo ayudarte?', voz)}
@@ -299,20 +235,20 @@ export async function handleVoiceRespond(req, res) {
   ${twimlSay('Fue un placer atenderte. Hasta luego.', voz)}
   <Hangup/>
 </Response>`;
-    }
 
     res.type('text/xml').send(twiml);
 
   } catch (error) {
     console.error('❌ [VOICE] Error en handleVoiceRespond:', error);
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    if (!res.headersSent) {
+      res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${twimlSay('Disculpa, tuve un problema técnico. ¿Podrías repetir tu pregunta?')}
   ${twimlGather(actionUrl)}
   ${twimlSay('Lo siento, sigo con problemas. Intenta más tarde. Adiós.')}
   <Hangup/>
-</Response>`;
-    res.type('text/xml').send(twiml);
+</Response>`);
+    }
   }
 }
 
@@ -326,12 +262,11 @@ export async function handleOutbound(req, res) {
     const agentes = agentesVoz.obtenerAgentes();
     const agente = (agent_id && agentes.find(a => a.id === agent_id)) || agentes[0];
 
-    const voz = agente?.voz || 'Polly.Mia';
+    const voz = sanitizeVoz(agente?.voz || 'Polly.Mia');
     const saludo = agente?.greeting_message ||
       agente?.saludo ||
       `Hola, te llama el asesor de pensiones del IMSS. ¿En qué puedo ayudarte?`;
 
-    // CallSid vendrá en el body si Twilio lo incluye
     const { CallSid = '' } = req.body || {};
     const actionUrl = `${baseUrl}/api/twilio/voice/respond?agent_id=${encodeURIComponent(agente?.id || '')}&call_sid=${encodeURIComponent(CallSid)}`;
 
@@ -368,10 +303,6 @@ export async function handleStatus(req, res) {
 
 // ─── LLAMADA SALIENTE (API REST Twilio) ──────────────────────────────
 
-/**
- * Iniciar una llamada saliente via API REST de Twilio
- * @param {{ to, agentId?, notes? }} params
- */
 export async function hacerLlamadaSaliente({ to, agentId = null, baseUrl }) {
   const cfg = obtenerConfigTwilio();
 
@@ -413,7 +344,6 @@ export async function hacerLlamadaSaliente({ to, agentId = null, baseUrl }) {
     throw new Error(`Twilio error ${response.status}: ${data.message || JSON.stringify(data)}`);
   }
 
-  // Registrar la llamada saliente en BD
   callsDb.registrarLlamada({
     call_sid: data.sid,
     from_number: from,
@@ -426,9 +356,6 @@ export async function hacerLlamadaSaliente({ to, agentId = null, baseUrl }) {
   return data;
 }
 
-/**
- * Hacer llamada puente (Click-to-Call) — llama al admin primero, luego conecta con el prospecto
- */
 export async function hacerLlamadaPuente(numeroDestino, numeroAdmin) {
   const cfg = obtenerConfigTwilio();
   if (!cfg.accountSid || !cfg.authToken) throw new Error('Twilio no configurado');
@@ -436,7 +363,6 @@ export async function hacerLlamadaPuente(numeroDestino, numeroAdmin) {
   const callerIdToUse = cfg.phoneNumber;
   if (!callerIdToUse) throw new Error('No hay número Twilio configurado en Settings');
 
-  // Construir TwiML de puente inline
   const twimlPuente = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say language="es-MX" voice="Polly.Mia">Conectando llamada desde el CRM. Espera por favor.</Say>
@@ -474,19 +400,15 @@ async function llamarGemini(userMsg, systemPrompt, greeting, historial, apiKey) 
     ? `INSTRUCCIONES DEL SISTEMA:\n${systemPrompt}\n\nREGLA IMPORTANTE: ${reglaVoz}`
     : reglaVoz;
 
-  // Construir contents en formato Gemini (multi-turn)
   const contents = [
     { role: 'user', parts: [{ text: systemContent }] },
     { role: 'model', parts: [{ text: greeting }] }
   ];
 
-  // Agregar historial previo
   for (const turno of historial) {
     contents.push({ role: 'user', parts: [{ text: turno.user }] });
     contents.push({ role: 'model', parts: [{ text: turno.ai }] });
   }
-
-  // Agregar mensaje actual
   contents.push({ role: 'user', parts: [{ text: userMsg }] });
 
   const response = await fetch(url, {
@@ -500,14 +422,12 @@ async function llamarGemini(userMsg, systemPrompt, greeting, historial, apiKey) 
 
   const data = await response.json();
   if (!response.ok) throw new Error(`Gemini error: ${data.error?.message || JSON.stringify(data)}`);
-
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
 async function llamarOpenAI(userMsg, systemPrompt, greeting, historial, apiKey) {
   const reglaVoz = 'REGLA: Solo puedes emitir UNA pregunta o respuesta por turno. Máximo 2-3 oraciones.';
   const sysContent = systemPrompt ? `${systemPrompt}\n\n${reglaVoz}` : reglaVoz;
-
   const messages = construirMensajesOpenAI(userMsg, sysContent, greeting, historial);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -516,12 +436,7 @@ async function llamarOpenAI(userMsg, systemPrompt, greeting, historial, apiKey) 
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages,
-      max_tokens: 200,
-      temperature: 0.7
-    })
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages, max_tokens: 200, temperature: 0.7 })
   });
 
   const data = await response.json();
@@ -534,17 +449,14 @@ function construirMensajesOpenAI(userMsg, systemPrompt, greeting, historial) {
     { role: 'system', content: systemPrompt },
     { role: 'assistant', content: greeting }
   ];
-
   for (const turno of historial) {
     messages.push({ role: 'user', content: turno.user });
     messages.push({ role: 'assistant', content: turno.ai });
   }
-
   messages.push({ role: 'user', content: userMsg });
   return messages;
 }
 
-/** Parsear el transcript guardado en calls.json en turnos [{user, ai}] */
 function parsearTranscript(transcript) {
   if (!transcript) return [];
   const turnos = [];
@@ -554,20 +466,15 @@ function parsearTranscript(transcript) {
     const lineaUser = lineas[i] || '';
     const lineaAI = lineas[i + 1] || '';
     if (lineaUser.startsWith('User: ') && lineaAI.startsWith('AI: ')) {
-      turnos.push({
-        user: lineaUser.replace('User: ', ''),
-        ai: lineaAI.replace('AI: ', '')
-      });
+      turnos.push({ user: lineaUser.replace('User: ', ''), ai: lineaAI.replace('AI: ', '') });
       i += 2;
     } else {
       i++;
     }
   }
-  // Tomar solo los últimos 5 turnos (10 mensajes) para no saturar el prompt
   return turnos.slice(-5);
 }
 
-/** Quitar markdown y caracteres que no suenan bien por teléfono */
 function limpiarParaVoz(texto) {
   return texto
     .replace(/\*\*/g, '')
@@ -577,28 +484,31 @@ function limpiarParaVoz(texto) {
     .replace(/[📊💰🎯📈⚠️✅❌📚📋🔍💼📞📱🤖1️⃣2️⃣3️⃣]/gu, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
-    .substring(0, 500); // Máximo ~150 palabras
+    .substring(0, 500);
 }
 
 // ─── Compatibilidad con código existente ─────────────────────────────
 
-/** @deprecated Usar handleVoiceRespond en su lugar */
 export async function handleVoiceInput(req, res, procesarConIA) {
   return handleVoiceRespond(req, res);
 }
 
 export async function hacerLlamada(to, mensajeInicial) {
   const cfg = obtenerConfigTwilio();
-  if (!twilioClient) {
-    const twilio = await import('twilio');
-    twilioClient = twilio.default(cfg.accountSid, cfg.authToken);
-  }
-  const call = await twilioClient.calls.create({
-    twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX" voice="Polly.Mia">${mensajeInicial}</Say></Response>`,
-    to,
-    from: cfg.phoneNumber
+  const body = new URLSearchParams({
+    To: to,
+    From: cfg.phoneNumber,
+    Twiml: `<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX" voice="Polly.Mia">${mensajeInicial}</Say></Response>`
   });
-  return call.sid;
+  const auth = Buffer.from(`${cfg.accountSid}:${cfg.authToken}`).toString('base64');
+  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${cfg.accountSid}/Calls.json`, {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString()
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.message);
+  return d.sid;
 }
 
 export default {
