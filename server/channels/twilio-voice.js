@@ -497,12 +497,12 @@ export async function hacerLlamadaPuente(numeroDestino, numeroAdmin) {
     throw new Error('Twilio no está configurado');
   }
 
-  // FORCE USAGE OF ENV VAR TWILIO PHONE NUMBER FOR CALLER ID.
-  // Using user-configured settings.phoneNumber often leads to Geo Permission/Verification errors on Trial accounts.
-  const callerIdToUse = process.env.TWILIO_PHONE_NUMBER;
+  // Usar el número de voz configurado en el panel (settings.json) o el de .env como fallback
+  const config = getConfig();
+  const callerIdToUse = config.phoneNumber;
 
   if (!callerIdToUse) {
-    throw new Error('El número base de Twilio no está configurado en .env (TWILIO_PHONE_NUMBER).');
+    throw new Error('No hay número de Twilio configurado. Ve a Config > Canales de Comunicación y agrega tu número Twilio con tipo "Llamadas".');
   }
 
   const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -511,7 +511,7 @@ export async function hacerLlamadaPuente(numeroDestino, numeroAdmin) {
   twiml.say({ voice: 'Polly.Mia', language: 'es-MX' }, 'Conectando llamada desde el CRM. Espera por favor.');
   twiml.dial({ callerId: callerIdToUse }, numeroDestino);
 
-  console.log(`[Twilio Bridge] Calling Admin: ${numeroAdmin}, Bridging to: ${numeroDestino}, Using CallerId: ${callerIdToUse}`);
+  console.log(`[Twilio Bridge] From: ${callerIdToUse} → Admin: ${numeroAdmin} → Prospect: ${numeroDestino}`);
 
   const call = await client.calls.create({
     twiml: twiml.toString(),
