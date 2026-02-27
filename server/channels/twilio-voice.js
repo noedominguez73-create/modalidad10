@@ -68,13 +68,23 @@ function obtenerConfigTwilio() {
   return s;
 }
 
-/** Obtener BASE_URL para los webhooks */
+/** Obtener BASE_URL para los webhooks — SIEMPRE debe ser una URL absoluta válida */
 function obtenerBaseUrl(req) {
   const cfg = obtenerConfigTwilio();
+
+  // 1. Prioridad: webhookBaseUrl en settings.json o env var
+  if (cfg.webhookBaseUrl && cfg.webhookBaseUrl.startsWith('http')) {
+    return cfg.webhookBaseUrl.replace(/\/$/, '');
+  }
+  if (process.env.WEBHOOK_BASE_URL && process.env.WEBHOOK_BASE_URL.startsWith('http')) {
+    return process.env.WEBHOOK_BASE_URL.replace(/\/$/, '');
+  }
+
+  // 2. Construir desde headers del request (Railway/proxy)
   const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers.host;
-  const dynamic = `${proto}://${host}`;
-  return (cfg.webhookBaseUrl || process.env.WEBHOOK_BASE_URL || dynamic).replace(/\/$/, '');
+  // x-forwarded-host es más confiable detrás de un proxy que host
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'asesoriaimss.io';
+  return `${proto}://${host}`;
 }
 
 /** Verificar si Deepgram está disponible */
