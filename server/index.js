@@ -612,14 +612,16 @@ app.get('/api/twilio/token', (req, res) => {
 
 // ─── DIAGNÓSTICO: Endpoint ultra-simple para probar que Twilio llega al servidor ───
 app.all('/api/twilio/ping', (req, res) => {
-  console.log('🔔 [PING] Twilio llegó al servidor!', req.method, req.body);
-  res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say language="es-MX" voice="Polly.Mia">Conexion exitosa con asesoria IMSS. El servidor funciona correctamente.</Say>
-  <Pause length="1"/>
-  <Say language="es-MX" voice="Polly.Mia">Hasta luego.</Say>
-  <Hangup/>
-</Response>`);
+  console.log('🔔 [PING] Twilio llegó al servidor!', req.method, JSON.stringify(req.body));
+  const twiml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<Response>\n' +
+    '  <Say language="es-MX" voice="Polly.Conchita">Bienvenido al asesor de pensiones. Soy una inteligencia artificial. En que puedo ayudarte?</Say>\n' +
+    '  <Pause length="2"/>\n' +
+    '  <Say language="es-MX" voice="Polly.Conchita">Hasta luego.</Say>\n' +
+    '  <Hangup/>\n' +
+    '</Response>';
+  console.log('📤 [PING] Enviando TwiML:', twiml.length, 'bytes');
+  res.type('text/xml').send(twiml);
 });
 
 // Webhook: Llamada entrante

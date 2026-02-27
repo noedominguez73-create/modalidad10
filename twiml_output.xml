@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">Bienvenido al asesor de pensiones del IMSS. Soy una inteligencia artificial y te ayudaré con tu Modalidad 40 o Modalidad 10. ¿En qué puedo ayudarte?</Say>
+  <Gather input="speech" language="es-MX" speechTimeout="auto" action="https://asesoriaimss.io/api/twilio/voice/respond?agent_id=agent_default&amp;call_sid=CAtestXML" method="POST"><Say language="es-MX" voice="Polly.Mia">Te escucho.</Say></Gather>
+  <Say language="es-MX" voice="Polly.Mia">No escuché nada. Hasta luego.</Say>
+  <Hangup/>
+</Response>
