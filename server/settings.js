@@ -95,6 +95,69 @@ export function obtenerTwilio() {
 }
 
 /**
+ * Obtener configuración completa de Twilio incluyendo credenciales de settings.json
+ * Prioridad: settings.json → env vars
+ */
+export function obtenerTwilioFullConfig() {
+  const s = cargarSettings();
+  const fromSettings = s.twilio || {};
+  return {
+    accountSid: fromSettings.accountSid || process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: fromSettings.authToken || process.env.TWILIO_AUTH_TOKEN || '',
+    apiKeySid: process.env.TWILIO_API_KEY_SID || '',
+    apiKeySecret: process.env.TWILIO_API_KEY_SECRET || '',
+    twimlAppSid: process.env.TWILIO_TWIML_APP_SID || '',
+    webhookBaseUrl: fromSettings.webhookBaseUrl || process.env.WEBHOOK_BASE_URL || '',
+    phoneNumber: fromSettings.phoneNumber || obtenerNumeroPorTipo('voz')?.numero || process.env.TWILIO_PHONE_NUMBER || '',
+    whatsappNumber: obtenerNumeroPorTipo('whatsapp')?.numero || process.env.WHATSAPP_NUMBER || '',
+    defaultAgentId: fromSettings.defaultAgentId || null
+  };
+}
+
+/**
+ * Obtener API Keys para el agente de voz (Gemini + OpenAI)
+ * Prioridad: settings.json → env vars
+ */
+export function obtenerApiKeysVoz() {
+  const s = cargarSettings();
+  const fromSettings = s.aiKeys || {};
+  return {
+    gemini: fromSettings.gemini || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
+    openai: fromSettings.openai || process.env.OPENAI_API_KEY || ''
+  };
+}
+
+/**
+ * Guardar credenciales Twilio + AI keys desde la UI Settings
+ * NUNCA devuelve las claves completas al frontend
+ */
+export function guardarApiKeysVoz({ accountSid, authToken, phoneNumber, geminiKey, openaiKey, webhookBaseUrl } = {}) {
+  const s = cargarSettings();
+
+  if (!s.twilio) s.twilio = {};
+  if (!s.aiKeys) s.aiKeys = {};
+
+  if (accountSid !== undefined) s.twilio.accountSid = accountSid;
+  if (authToken !== undefined) s.twilio.authToken = authToken;
+  if (phoneNumber !== undefined) s.twilio.phoneNumber = phoneNumber;
+  if (webhookBaseUrl !== undefined) s.twilio.webhookBaseUrl = webhookBaseUrl;
+  if (geminiKey !== undefined) s.aiKeys.gemini = geminiKey;
+  if (openaiKey !== undefined) s.aiKeys.openai = openaiKey;
+
+  return guardarSettings(s);
+}
+
+/**
+ * Guardar el agente default de Twilio
+ */
+export function guardarTwilioDefaultAgent(agentId) {
+  const s = cargarSettings();
+  if (!s.twilio) s.twilio = {};
+  s.twilio.defaultAgentId = agentId;
+  return guardarSettings(s);
+}
+
+/**
  * Obtener token de Telegram (SOLO de env vars)
  */
 export function obtenerTelegram() {
@@ -543,8 +606,12 @@ export default {
   obtenerSettingsSeguro,
   obtenerEstadoServicios,
   obtenerTwilio,
+  obtenerTwilioFullConfig,
   obtenerTelegram,
   obtenerApiKeys,
+  obtenerApiKeysVoz,
+  guardarApiKeysVoz,
+  guardarTwilioDefaultAgent,
   obtenerVozConfig,
   guardarVozConfig,
   obtenerLlmConfig,

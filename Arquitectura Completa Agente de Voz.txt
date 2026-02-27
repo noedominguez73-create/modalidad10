@@ -1,0 +1,265 @@
+Arquitectura Completa: Agente de Voz ↔ Twilio
+📦 Las 4 Piezas del Sistema
+┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
+│  Teléfono del   │ ──1──>  │     Twilio      │ ──2──>  │  CallCenteria   │
+│    Usuario      │         │    (Cloud)      │         │  (Backend 4000) │
+│                 │ <──5──  │                 │ <──4──  │                 │
+└─────────────────┘         └─────────────────┘         └─────────────────┘
+                                    │                          │
+                                    │                          │ 3
+                                    │                          ▼
+                                    │                   ┌─────────────────┐
+                                    │                   │  Gemini / OpenAI│
+                                    │                   └─────────────────┘
+🗄️ Base de Datos: Dónde Vive Toda la Config
+Todo está almacenado en MySQL, en dos tablas clave:
+
+Tabla configuracion_canales — Las credenciales de Twilio
+Esta tabla tiene una fila por organización. Guarda absolutamente todo lo necesario para conectar con Twilio y con la IA:
+
+Columna DB	Qué es	Desde dónde se configura
+sms_api_key	Twilio Account SID (ACxxx...)	Settings de la app
+sms_api_secret	Twilio Auth Token	Settings de la app
+sms_from_number	Número de Twilio (ej: +15551234567)	Settings de la app
+gemini_api_key	API Key de Gemini	Settings de la app
+openai_api_key	API Key de OpenAI	Settings de la app
+twilio_default_agent_id	ID del agente IA de fallback	Panel de Twilio en app
+sms_provider	Se fija en "twilio" automáticamente	Al guardar Account SID
+Nota importante: No hay credenciales de Twilio en el archivo .env. El 
+
+.env.example
+ solo tiene NODE_ENV, PORT, DATABASE_*, JWT_SECRET, CORS_ORIGIN y BASE_URL. Las credenciales de Twilio van únicamente en la base de datos, ingresadas desde la UI de Settings.
+
+Tabla agentes_ia — La personalidad del agente de voz
+Columna	Qué es
+nombre	Nombre del agente (ej: "Asistente de Ventas")
+tipo	'voz', 'texto' o 'hibrido'
+prompt_sistema	Las instrucciones que recibe la IA
+greeting_message	Lo primero que dice al contestar
+telefono_asignado	El número de Twilio asignado a este agente
+telefono_activo	1 = activo, 0 = inactivo (no contesta)
+estado	1 = existe, 0 = desactivado
+personalidad	Descripción usada como fallback del prompt
+Tabla twilio_calls — Registro de cada llamada
+Guarda el historial: call_sid, from_number, to_number, direction (inbound/outbound), status, transcript (conversación completa), agent_id, duration, recording_url.
+
+🌐 La Variable BASE_URL: El Puente Crítico
+En el .env, existe esta variable:
+
+BASE_URL=https://tu-dominio.com
+Esta es la URL pública de tu servidor. Es absolutamente crítica porque Twilio está en la nube de Internet y necesita saber a qué URL llamar con los webhooks. El backend la usa en tres lugares del código:
+
+GET /api/twilio/config — Cuando la UI pide la configuración, construye las URLs de webhook así:
+
+typescript
+const baseUrl = process.env.BASE_URL || 'https://secretaria.click';
+webhook_url: `${baseUrl}/api/twilio/voice`
+status_url:  `${baseUrl}/api/twilio/status`
+POST /api/twilio/call — Al hacer llamadas salientes, le dice a Twilio qué URL usar para el TwiML:
+
+typescript
+formData.append('Url', `${baseUrl}/api/twilio/voice/outbound?agent_id=...`)
+POST /api/agentes-ia/:id/test-call — Lo mismo para llamadas de prueba.
+
+En producción BASE_URL=https://secretaria.click — En desarrollo local necesitas ngrok o cloudflared.
+
+🔁 Flujo Completo Llamada ENTRANTE (paso a paso)
+PASO 1: Usuario llama → Twilio recibe
+Alguien llama al número de Twilio (ej: +15551234567). Twilio hace un POST automático al webhook:
+
+POST https://secretaria.click/api/twilio/voice
+Content-Type: application/x-www-form-urlencoded
+Called=+15551234567&Caller=+15559876543&CallSid=CA123abc&CallStatus=ringing
+PASO 2: Backend identifica la organización y el agente
+El handler en [
+
+twilio.routes.ts
+ línea 261](file:///c:/callcenteria/backend/src/routes/twilio.routes.ts#L261-318) hace:
+
+
+findOrgByPhoneNumber(Called)
+ — Busca en configuracion_canales qué organización tiene ese número. Limpia el número (quita +, espacios, guiones) y busca los últimos 10 dígitos.
+
+
+getDefaultAgent(organizacionId, Called)
+ — Busca el agente IA correcto, en este orden de prioridad:
+
+① Primero busca un agente con telefono_asignado = Called Y telefono_activo = 1 Y estado = 1
+② Si no hay uno asignado, busca el twilio_default_agent_id en configuracion_canales
+③ Si tampoco hay default configurado, toma el primer agente de tipo voz o hibrido que esté activo
+Registra la llamada en twilio_calls con estado ringing.
+
+PASO 3: Backend responde con TwiML (el saludo)
+El servidor responde con XML puro (TwiML). Twilio lo lee y lo ejecuta como instrucciones de voz:
+
+xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">
+    Hola, soy tu asistente. ¿En qué puedo ayudarte?
+  </Say>
+  <Gather input="speech" language="es-MX" speechTimeout="auto"
+          action="/api/twilio/voice/respond?agent_id=5&org_id=2" method="POST">
+    <Say language="es-MX" voice="Polly.Mia">Te escucho.</Say>
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">No escuché nada. Adiós.</Say>
+  <Hangup/>
+</Response>
+<Say>: Twilio convierte texto a voz usando AWS Polly (voz Polly.Mia, español México).
+<Gather>: Twilio escucha al usuario. Cuando detecta silencio (speechTimeout="auto"), transcribe el audio a texto y hace otro POST al action.
+Si el usuario no dice nada → cae al <Say> de fallback y cuelga.
+El greeting_message viene del agente. Si no tiene, usa personalidad o un genérico: "Hola, soy {nombre}. ¿En qué puedo ayudarte?".
+
+PASO 4: Usuario habla → Twilio transcribe → Backend procesa
+El usuario habla. Twilio transcribe el audio con su STT (Speech-to-Text) y hace POST al endpoint de respuesta:
+
+POST https://secretaria.click/api/twilio/voice/respond?agent_id=5&org_id=2
+Content-Type: application/x-www-form-urlencoded
+SpeechResult=Quiero saber su horario de atención&Confidence=0.94&CallSid=CA123abc
+El handler en [
+
+twilio.routes.ts
+ línea 396](file:///c:/callcenteria/backend/src/routes/twilio.routes.ts#L396-580) hace:
+
+Lee el historial de la conversación desde twilio_calls.transcript usando el CallSid.
+Busca las API keys de la organización en configuracion_canales.
+Llama a la IA (Gemini tiene prioridad sobre OpenAI):
+Si tiene Gemini:
+typescript
+// Construye el historial multi-turno
+contents = [
+  { role: 'user',  parts: [{ text: 'INSTRUCCIONES DEL SISTEMA: ...' }] },
+  { role: 'model', parts: [{ text: greeting }] },  // El saludo inicial
+  { role: 'user',  parts: [{ text: 'turno anterior del usuario' }] },
+  { role: 'model', parts: [{ text: 'respuesta anterior de la IA' }] },
+  // ... historial completo ...
+  { role: 'user',  parts: [{ text: SpeechResult }] }  // El mensaje actual
+]
+// Llama a gemini-2.0-flash con maxOutputTokens: 200, temperature: 0.7
+Si tiene OpenAI (y no Gemini):
+typescript
+messages = [
+  { role: 'system',    content: 'INSTRUCCIONES + REGLA: máximo 2-3 oraciones' },
+  { role: 'assistant', content: greeting },
+  // ... historial ...
+  { role: 'user',      content: SpeechResult }
+]
+// Llama a gpt-4o-mini con max_tokens: 200, temperature: 0.7
+Regla de oro hardcodeada: "Solo puedes emitir UNA pregunta o respuesta por turno. Máximo 2-3 oraciones." — para que la conversación telefónica sea natural.
+
+La respuesta de la IA se limpia: se eliminan asteriscos, saltos de línea, formateo markdown (porque es audio).
+
+Guarda el intercambio en interacciones_ia y actualiza el transcript en twilio_calls:
+sql
+UPDATE twilio_calls SET transcript = CONCAT(COALESCE(transcript,''), '\nUser: ', ?, '\nAI: ', ?) 
+WHERE call_sid = ?
+PASO 5: Backend responde con nuevo TwiML → ciclo continúa
+xml
+<Response>
+  <Say language="es-MX" voice="Polly.Mia">[Respuesta de la IA aquí]</Say>
+  <Gather input="speech" language="es-MX" speechTimeout="auto"
+          action="/api/twilio/voice/respond?agent_id=5&org_id=2" method="POST">
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">¿Hay algo más en lo que pueda ayudarte?</Say>
+  <Gather input="speech" language="es-MX" speechTimeout="3" ...>
+  </Gather>
+  <Say language="es-MX" voice="Polly.Mia">Fue un placer atenderte. Hasta luego.</Say>
+  <Hangup/>
+</Response>
+Este ciclo (habla ↔ escucha) se repite indefinidamente hasta que el usuario cuelga o hay silencio.
+
+📞 Flujo LLAMADA SALIENTE (Click-to-Call)
+El proceso es diferente: el backend inicia la llamada a través de la API REST de Twilio.
+
+Desde el Frontend (
+
+TestCallDialog.tsx
+)
+El diálogo de prueba llama a:
+
+POST /api/agentes-ia/:id/test-call
+Body: { phone_number: "+526571234567", duration_limit: 300, notes: "..." }
+El Backend hace la llamada a Twilio
+Código en [
+
+agentes-ia.routes.ts
+ línea 293](file:///c:/callcenteria/backend/src/routes/agentes-ia.routes.ts#L293-389):
+
+typescript
+// Lee credenciales de la BD (sms_api_key, sms_api_secret, sms_from_number)
+const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${account_sid}/Calls.json`;
+const auth = Buffer.from(`${account_sid}:${auth_token}`).toString('base64');
+// El número FROM es el de Twilio de la organización (sms_from_number)
+// El número TO es el que ingresó el usuario en el diálogo
+formData.append('To',             phone_number);
+formData.append('From',           twilioConfig.phone_number);  // ← El + de Twilio
+formData.append('Url',            `${baseUrl}/api/twilio/voice/outbound?agent_id=5&org_id=2`);
+formData.append('StatusCallback', `${baseUrl}/api/twilio/status`);
+Twilio llama al número de destino. Cuando contesta, Twilio hace GET/POST a la Url para pedir el TwiML.
+El endpoint /voice/outbound responde con el TwiML de saludo del agente.
+A partir de ahí, el flujo es idéntico al entrante: <Gather> → /voice/respond → IA → repite.
+🗂️ Todos los Endpoints y Sus Roles
+Endpoint	Auth	Quién lo llama	Para qué sirve
+POST /api/twilio/voice	❌ No (público)	Twilio automáticamente	Recibe llamadas entrantes, saluda
+POST /api/twilio/voice/respond	❌ No (público)	Twilio automáticamente	Recibe texto del usuario, consulta IA, responde
+POST /api/twilio/voice/outbound	❌ No (público)	Twilio automáticamente	TwiML inicial para llamadas salientes
+POST /api/twilio/status	❌ No (público)	Twilio automáticamente	Actualiza estado/duración de la llamada en BD
+GET /api/twilio/config	✅ JWT	Frontend	Lee config de Twilio (número, agente default, URLs de webhook)
+PUT /api/twilio/config	✅ JWT	Frontend	Cambia el agente default de Twilio
+POST /api/twilio/call	✅ JWT	Frontend	Inicia llamada saliente (Click-to-Call genérico)
+GET /api/twilio/calls	✅ JWT	Frontend	Historial de llamadas
+POST /api/agentes-ia/:id/test-call	✅ JWT	Frontend (
+
+TestCallDialog
+)	Llamada de prueba a un agente específico
+GET /api/agentes-ia/:id/test-calls	✅ JWT	Frontend	Historial de llamadas de prueba del agente
+PUT /api/settings/organizations/:id/api-keys	✅ JWT	Frontend (Settings)	Guarda Account SID, Auth Token, Phone Number, Gemini Key, OpenAI Key
+⚙️ Cómo Se Configura en la App (UI → BD → Twilio)
+Usuario va a Settings ──> PUT /api/settings/organizations/:id/api-keys
+                            │
+                            └──> BD: configuracion_canales
+                                   sms_api_key    = Account SID
+                                   sms_api_secret = Auth Token
+                                   sms_from_number = +15551234567
+                                   sms_provider   = 'twilio'
+                                   gemini_api_key = AIza...
+Las API keys nunca se devuelven completas — el GET las enmascara (ACxx...xxxx). El número de teléfono sí se muestra completo.
+
+🔗 Cómo Se Conecta el Agente al Número de Teléfono
+Hay dos mecanismos paralelos para vincular un agente a un número:
+
+Mecanismo 1: telefono_asignado en el agente (prioridad #1)
+Desde EditVoiceAgentPage.tsx el usuario puede guardar el campo telefono_asignado en el agente. Cuando llega una llamada a ese número, la función 
+
+getAgentByPhoneNumber()
+ lo encuentra directamente. Si un número ya estaba asignado a otro agente, se desasigna automáticamente (solo puede haber un agente por número).
+
+Mecanismo 2: twilio_default_agent_id en la configuración (prioridad #2)
+Desde la pantalla de configuración de Twilio en la app (PUT /api/twilio/config), se puede designar cuál agente atiende por defecto cuando ninguno tiene el número asignado.
+
+Mecanismo 3: Primer agente activo de voz (prioridad #3 / fallback)
+Si no hay asignación directa ni default configurado, el sistema toma el primer agente con tipo = 'voz' o 'hibrido' y estado = 1.
+
+🏗️ Cómo Se Registra el Webhook en Twilio Console
+Una vez el servidor está en una URL pública, en Twilio Console → Phone Numbers → Active Numbers, seleccionas tu número y configuras:
+
+Campo	Valor
+A CALL COMES IN	Webhook
+URL	https://secretaria.click/api/twilio/voice
+HTTP Method	POST
+Status Callback URL (opcional)	https://secretaria.click/api/twilio/status
+🧩 Reglas de Negocio Importantes (sin tocar nada)
+Los webhooks son públicos (sin JWT) — Twilio no puede pasar autenticación Bearer, así que POST /voice, POST /voice/respond, POST /voice/outbound y POST /status no tienen middleware de auth.
+
+Tiempo límite: Twilio espera máximo 15 segundos de respuesta. Si el servidor tarda más (IA lenta), Twilio cancela el webhook.
+
+La respuesta DEBE ser XML TwiML válido — Si el backend devuelve JSON o error, Twilio no sabe qué hacer y cuelga.
+
+La voz usada es Amazon Polly Mia (español México, es-MX). Esto está hardcodeado en el TwiML generado, no es configurable desde la UI actualmente.
+
+El modelo de Gemini es gemini-2.0-flash (hardcodeado en el código). El modelo de OpenAI es gpt-4o-mini.
+
+maxOutputTokens: 200 — La respuesta de la IA está limitada a ~150 palabras para que suene natural por teléfono.
+
+La búsqueda de número es flexible: Quita +, guiones, espacios y busca por los últimos 10 dígitos, lo que permite encontrar números independientemente del formato (+15557890, 1 555 789-0, etc.).
+

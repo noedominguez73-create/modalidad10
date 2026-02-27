@@ -11,6 +11,7 @@ import feedback from './feedback.js';
 import settings from './settings.js';
 import crm from './crm/index.js';
 import agentesVoz from './crm/agentes-voz.js';
+import callsDb from './crm/calls-db.js';
 import training from './training.js';
 import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -737,10 +738,131 @@ app.post('/api/twilio/procesar-voz', async (req, res) => {
   }
 
   try {
-    await twilioVoice.default.handleVoiceInput(req, res, aiAgent.default.procesarConIA);
+    if (!twilioVoice) {
+      return res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX" voice="Polly.Mia">Lo sentimos, el sistema no está listo. Intenta en unos segundos.</Say><Hangup/></Response>`);
+    }
+    await twilioVoice.default.handleVoiceInput(req, res, aiAgent?.default?.procesarConIA);
   } catch (err) {
     console.error('❌ Error en handleVoiceInput:', err);
     res.status(500).send('Error procesando voz');
+  }
+});
+
+// ─── NUEVO: Ciclo de conversación (STT → IA → TwiML) ───
+// Este es el webhook principal que recibe lo que dijo el usuario y devuelve la respuesta IA
+app.post('/api/twilio/voice/respond', async (req, res) => {
+  if (!twilioVoice) {
+    return res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX" voice="Polly.Mia">Sistema no disponible</Say><Hangup/></Response>`);
+  }
+  try {
+    await twilioVoice.default.handleVoiceRespond(req, res);
+  } catch (err) {
+    console.error('❌ Error en handleVoiceRespond:', err);
+    res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say language="es-MX" voice="Polly.Mia">Error interno</Say><Hangup/></Response>`);
+  }
+});
+
+// ─── NUEVO: TwiML para llamadas salientes ───
+app.post('/api/twilio/voice/outbound', async (req, res) => {
+  if (!twilioVoice) {
+    return res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
+  }
+  try {
+    await twilioVoice.default.handleOutbound(req, res);
+  } catch (err) {
+    console.error('❌ Error en handleOutbound:', err);
+    res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response><Hangup/></Response>`);
+  }
+});
+
+// ─── NUEVO: Status Callback de Twilio (actualiza estado/duración en BD) ───
+app.post('/api/twilio/status', async (req, res) => {
+  if (!twilioVoice) return res.sendStatus(204);
+  try {
+    await twilioVoice.default.handleStatus(req, res);
+  } catch (err) {
+    console.error('❌ Error en handleStatus:', err);
+    res.sendStatus(204);
+  }
+});
+
+// ─── NUEVO: GET /api/twilio/config — Config + webhook URLs enmascaradas ───
+app.get('/api/twilio/config', (req, res) => {
+  try {
+    const cfg = settings.obtenerTwilioFullConfig ? settings.obtenerTwilioFullConfig() : settings.obtenerTwilio();
+    const baseUrl = (cfg.webhookBaseUrl || process.env.WEBHOOK_BASE_URL || 'https://tu-dominio.com').replace(/\/$/, '');
+    const numero = cfg.phoneNumber;
+    // Enmascarar Account SID y Auth Token
+    const accountSidMask = cfg.accountSid ? cfg.accountSid.substring(0, 4) + '...' + cfg.accountSid.slice(-4) : '';
+    res.json({
+      configurado: !!(cfg.accountSid && cfg.authToken),
+      account_sid_mask: accountSidMask,
+      phone_number: numero,
+      default_agent_id: cfg.defaultAgentId || null,
+      webhook_url: `${baseUrl}/api/twilio/voice`,
+      status_url: `${baseUrl}/api/twilio/status`,
+      outbound_url: `${baseUrl}/api/twilio/voice/outbound`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── NUEVO: PUT /api/twilio/config — Cambiar agente default ───
+app.put('/api/twilio/config', (req, res) => {
+  try {
+    const { default_agent_id } = req.body;
+    if (!default_agent_id) return res.status(400).json({ error: 'Falta default_agent_id' });
+    settings.guardarTwilioDefaultAgent(default_agent_id);
+    res.json({ success: true, default_agent_id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── NUEVO: POST /api/twilio/call — Click-to-Call genérico ───
+app.post('/api/twilio/call', async (req, res) => {
+  const { to, agent_id } = req.body;
+  if (!to) return res.status(400).json({ error: 'Falta el número destino (to)' });
+  if (!twilioVoice) return res.status(503).json({ error: 'Twilio Voice no disponible' });
+  try {
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = (settings.obtenerTwilioFullConfig ? settings.obtenerTwilioFullConfig().webhookBaseUrl : '') ||
+      process.env.WEBHOOK_BASE_URL ||
+      `${proto}://${req.headers.host}`;
+    const data = await twilioVoice.default.hacerLlamadaSaliente({ to, agentId: agent_id, baseUrl });
+    res.json({ success: true, call_sid: data.sid, status: data.status });
+  } catch (err) {
+    console.error('❌ Error en Click-to-Call:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── NUEVO: GET /api/twilio/calls — Historial de llamadas ───
+app.get('/api/twilio/calls', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const agent_id = req.query.agent_id || null;
+    const direction = req.query.direction || null;
+    const llamadas = callsDb.obtenerLlamadas({ limit, agent_id, direction });
+    res.json({ success: true, count: llamadas.length, data: llamadas });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── NUEVO: POST /api/settings/api-keys — Guardar credenciales desde UI ───
+app.put('/api/settings/api-keys', (req, res) => {
+  try {
+    const { accountSid, authToken, phoneNumber, geminiKey, openaiKey, webhookBaseUrl } = req.body;
+    const ok = settings.guardarApiKeysVoz({ accountSid, authToken, phoneNumber, geminiKey, openaiKey, webhookBaseUrl });
+    // Re-inicializar Twilio con las nuevas credenciales
+    if (twilioVoice && (accountSid || authToken)) {
+      twilioVoice.default.initTwilio();
+    }
+    res.json({ success: ok, message: ok ? 'Credenciales guardadas. Twilio reinicializado.' : 'Error guardando credenciales' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -778,6 +900,40 @@ app.delete('/api/agentes/:id', (req, res) => {
     res.json({ success: true, message: 'Agente eliminado exitosamente' });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// ─── NUEVO: POST /api/agentes/:id/test-call — Llamada de prueba a agente específico
+app.post('/api/agentes/:id/test-call', async (req, res) => {
+  const { id } = req.params;
+  const { phone_number, notes } = req.body;
+  if (!phone_number) return res.status(400).json({ error: 'Falta phone_number' });
+  if (!twilioVoice) return res.status(503).json({ error: 'Twilio Voice no disponible' });
+  const agentes = agentesVoz.obtenerAgentes();
+  const agente = agentes.find(a => a.id === id);
+  if (!agente) return res.status(404).json({ error: 'Agente no encontrado' });
+  try {
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const baseUrl = (settings.obtenerTwilioFullConfig ? settings.obtenerTwilioFullConfig().webhookBaseUrl : '') ||
+      process.env.WEBHOOK_BASE_URL ||
+      `${proto}://${req.headers.host}`;
+    const data = await twilioVoice.default.hacerLlamadaSaliente({ to: phone_number, agentId: id, baseUrl });
+    res.json({ success: true, call_sid: data.sid, status: data.status, agent: agente.nombre, notes });
+  } catch (err) {
+    console.error('❌ Error en test-call:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── NUEVO: GET /api/agentes/:id/test-calls — Historial de llamadas del agente
+app.get('/api/agentes/:id/test-calls', (req, res) => {
+  try {
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit) || 20;
+    const llamadas = callsDb.obtenerLlamadas({ limit, agent_id: id });
+    res.json({ success: true, count: llamadas.length, data: llamadas });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
