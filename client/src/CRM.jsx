@@ -19,6 +19,8 @@ function CRM() {
   const [recordatorios, setRecordatorios] = useState([])
   const [clientesPagoPendiente, setClientesPagoPendiente] = useState([])
   const [agentesVoz, setAgentesVoz] = useState([]) // IA Voice Agents
+  const [llamadas, setLlamadas] = useState([]) // Call History
+  const [llamadaSeleccionada, setLlamadaSeleccionada] = useState(null) // Selected call for transcript view
 
   // Selected items
   const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null)
@@ -273,6 +275,23 @@ function CRM() {
       const data = await res.json()
       if (data.success) setAgentesVoz(data.data)
     } catch (err) { console.error('Error:', err) }
+    setLoading(false)
+  }
+
+  const cargarLlamadas = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/twilio/calls')
+      const data = await res.json()
+      if (data.success) {
+        setLlamadas(data.data || [])
+      } else {
+        setLlamadas([])
+      }
+    } catch (err) {
+      console.error('Error cargando llamadas:', err)
+      setLlamadas([])
+    }
     setLoading(false)
   }
 
@@ -558,6 +577,9 @@ function CRM() {
         cargarRecordatorios()
         cargarClientesPagoPendiente()
         break
+      case 'llamadas':
+        cargarLlamadas()
+        break
     }
   }
 
@@ -615,6 +637,9 @@ function CRM() {
         </button>
         <button className={vista === 'notificaciones' ? 'active' : ''} onClick={() => cambiarVista('notificaciones')}>
           📱 Notificaciones
+        </button>
+        <button className={vista === 'llamadas' ? 'active' : ''} onClick={() => cambiarVista('llamadas')}>
+          📞 Llamadas
         </button>
 
         <div className="crm-nav-phone" style={{ marginTop: 'auto', padding: '10px' }}>
@@ -2082,6 +2107,135 @@ function CRM() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ==================== HISTORIAL DE LLAMADAS ==================== */}
+      {vista === 'llamadas' && (
+        <div className="crm-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>📞 Historial de Llamadas</h2>
+            <button onClick={cargarLlamadas} style={{ padding: '8px 16px', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer' }}>
+              🔄 Actualizar
+            </button>
+          </div>
+
+          {llamadas.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <p style={{ fontSize: '48px' }}>📞</p>
+              <p>No hay llamadas registradas aún.</p>
+              <p style={{ fontSize: '14px' }}>Las llamadas aparecerán aquí cuando alguien llame al número de Twilio.</p>
+            </div>
+          )}
+
+          {llamadas.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {llamadas.map((llamada, idx) => (
+                <div key={llamada.call_sid || idx} style={{
+                  background: llamadaSeleccionada?.call_sid === llamada.call_sid ? '#1e3a5f' : '#1e293b',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: llamadaSeleccionada?.call_sid === llamada.call_sid ? '1px solid #3b82f6' : '1px solid #334155',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }} onClick={() => setLlamadaSeleccionada(llamadaSeleccionada?.call_sid === llamada.call_sid ? null : llamada)}>
+                  {/* Header de la llamada */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '20px' }}>
+                        {llamada.direction === 'inbound' ? '📥' : '📤'}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>
+                          {llamada.direction === 'inbound' ? llamada.from_number : llamada.to_number}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          {llamada.direction === 'inbound' ? 'Llamada entrante' : 'Llamada saliente'}
+                          {llamada.agent_id ? ` • Agente: ${llamada.agent_id}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '2px 10px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        background: llamada.status === 'completed' ? '#065f46' :
+                          llamada.status === 'in-progress' ? '#1e40af' :
+                            llamada.status === 'ringing' ? '#92400e' : '#374151',
+                        color: '#e2e8f0'
+                      }}>
+                        {llamada.status || 'unknown'}
+                      </div>
+                      {llamada.duration && (
+                        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                          ⏱️ {llamada.duration}s
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fecha */}
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    {llamada.created_at ? formatFechaHora(llamada.created_at) : 'Sin fecha'}
+                  </div>
+
+                  {/* Transcript expandible */}
+                  {llamadaSeleccionada?.call_sid === llamada.call_sid && llamada.transcript && (
+                    <div style={{
+                      marginTop: '16px',
+                      padding: '16px',
+                      background: '#0f172a',
+                      borderRadius: '8px',
+                      borderLeft: '3px solid #3b82f6'
+                    }}>
+                      <h4 style={{ color: '#60a5fa', marginBottom: '12px', fontSize: '14px' }}>
+                        📝 Transcripción de la Conversación
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {llamada.transcript.split('\n').filter(l => l.trim()).map((linea, i) => {
+                          const esUser = linea.startsWith('User: ')
+                          const esAI = linea.startsWith('AI: ')
+                          const texto = linea.replace(/^(User|AI): /, '')
+                          return (
+                            <div key={i} style={{
+                              display: 'flex',
+                              gap: '8px',
+                              alignItems: 'flex-start'
+                            }}>
+                              <span style={{
+                                minWidth: '60px',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                background: esUser ? '#1e40af' : esAI ? '#065f46' : '#374151',
+                                color: '#e2e8f0'
+                              }}>
+                                {esUser ? '👤 User' : esAI ? '🤖 IA' : '📌'}
+                              </span>
+                              <span style={{ color: '#cbd5e1', lineHeight: '1.5', fontSize: '14px' }}>
+                                {texto}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {llamadaSeleccionada?.call_sid === llamada.call_sid && !llamada.transcript && (
+                    <div style={{ marginTop: '12px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
+                      Sin transcripción disponible para esta llamada.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
