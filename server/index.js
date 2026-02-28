@@ -696,36 +696,34 @@ app.get('/api/tts/:audioId', (req, res) => {
   res.send(audioBuffer);
 });
 
-// ─── WHATSAPP WEBHOOK ─────────────────────────────────────────────────
+// ─── WHATSAPP WEBHOOK (Meta Cloud API directa) ───────────────────────
 
-// Webhook: Mensaje entrante de WhatsApp (Twilio llama esta URL)
+// GET: Verificación del webhook (Meta lo requiere al configurar)
+app.get('/api/whatsapp/webhook', (req, res) => {
+  if (!whatsapp) {
+    return res.status(200).send(req.query['hub.challenge'] || 'OK');
+  }
+  whatsapp.default.verificarWebhook(req, res);
+});
+
+// POST: Mensajes entrantes de WhatsApp (Meta Cloud API)
 app.post('/api/whatsapp/webhook', async (req, res) => {
-  const { From, Body, NumMedia } = req.body || {};
-  console.log(`💬 [WHATSAPP] Mensaje de ${From}: "${Body}" (Media: ${NumMedia || 0})`);
+  console.log(`💬 [WHATSAPP] Webhook recibido:`, JSON.stringify(req.body).substring(0, 200));
 
   if (!whatsapp) {
     console.error('❌ WhatsApp no está cargado');
-    return res.status(200).send('OK'); // Twilio espera 200 siempre
+    return res.status(200).send('OK');
   }
 
   try {
-    const procesarConIA = aiAgent ? aiAgent.default.procesarConIA || aiAgent.procesarConIA : null;
-    const validarDoc = documentValidator ? documentValidator.default.validarDocumento : async () => ({ mensaje: 'Validación de documentos no disponible.' });
+    const procesarConIA = aiAgent ? (aiAgent.default?.procesarConIA || aiAgent.procesarConIA) : null;
+    const validarDoc = documentValidator ? documentValidator.default?.validarDocumento : null;
 
     await whatsapp.default.handleIncomingMessage(req, res, procesarConIA, validarDoc);
   } catch (err) {
     console.error('❌ Error en webhook WhatsApp:', err);
     if (!res.headersSent) res.status(200).send('OK');
   }
-});
-
-// GET para verificación del webhook (Twilio pide esto al configurar)
-app.get('/api/whatsapp/webhook', (req, res) => {
-  res.json({
-    status: 'ok',
-    whatsappConfigured: !!whatsapp,
-    message: 'Webhook de WhatsApp activo. Usa POST para mensajes de Twilio.'
-  });
 });
 
 // Enviar mensaje proactivo de WhatsApp desde el CRM
@@ -741,8 +739,8 @@ app.post('/api/whatsapp/enviar', async (req, res) => {
   }
 
   try {
-    const sid = await whatsapp.default.enviarMensaje(telefono, mensaje);
-    res.json({ success: true, sid, message: 'Mensaje enviado' });
+    const msgId = await whatsapp.default.enviarMensaje(telefono, mensaje);
+    res.json({ success: true, messageId: msgId, message: 'Mensaje enviado' });
   } catch (err) {
     console.error('❌ Error enviando WhatsApp:', err);
     res.status(500).json({ success: false, error: err.message });

@@ -1,30 +1,46 @@
 /**
- * WHATSAPP - Integración via Twilio WhatsApp Business API
- * Soporta: texto, imágenes, documentos, ubicación
+ * WHATSAPP — Integración directa con Meta Cloud API
+ *
+ * NO usa Twilio — se conecta directamente a graph.facebook.com
+ * Soporta: texto, imágenes, documentos
+ *
+ * Configuración requerida (env vars o settings.json):
+ *   WHATSAPP_TOKEN        — Access Token permanente de Meta
+ *   WHATSAPP_PHONE_ID     — Phone Number ID (773416909191493)
+ *   WHATSAPP_VERIFY_TOKEN — Token para verificar webhook (lo defines tú)
  */
 
-import twilio from 'twilio';
+import settings from '../settings.js';
 
-const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER || 'whatsapp:+14155238886'; // Sandbox
+const GRAPH_API = 'https://graph.facebook.com/v21.0';
 
-let client = null;
-
-// Sesiones de conversación (en producción usar Redis)
+// Sesiones de conversación (en memoria, en producción usar Redis)
 const sesiones = new Map();
+setInterval(() => limpiarSesionesInactivas(), 3600000); // Limpiar cada hora
+
+// ─── Configuración ───────────────────────────────────────────────────
+
+function obtenerConfig() {
+  const cfg = settings.cargarSettings();
+  return {
+    token: process.env.WHATSAPP_TOKEN || cfg.whatsapp?.token || '',
+    phoneId: process.env.WHATSAPP_PHONE_ID || cfg.whatsapp?.phoneId || '773416909191493',
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || cfg.whatsapp?.verifyToken || 'asesoriaimss_verify_2024'
+  };
+}
 
 export function initWhatsApp() {
-  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
-    client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-    console.log('✓ WhatsApp (Twilio) inicializado');
+  const cfg = obtenerConfig();
+  if (cfg.token && cfg.phoneId) {
+    console.log(`✓ WhatsApp (Meta Cloud API) inicializado — Phone ID: ${cfg.phoneId}`);
     return true;
   }
-  console.log('⚠ WhatsApp no configurado');
+  console.log('⚠ WhatsApp no configurado — falta WHATSAPP_TOKEN en variables de entorno');
   return false;
 }
 
-// Obtener o crear sesión de usuario
+// ─── Sesiones ────────────────────────────────────────────────────────
+
 function obtenerSesion(telefono) {
   if (!sesiones.has(telefono)) {
     sesiones.set(telefono, {
@@ -40,134 +56,301 @@ function obtenerSesion(telefono) {
   return sesion;
 }
 
-// Webhook: Mensaje entrante de WhatsApp
-export async function handleIncomingMessage(req, res, procesarConIA, validarDocumento) {
-  const {
-    From: telefono,
-    Body: mensaje,
-    MediaUrl0: mediaUrl,
-    MediaContentType0: mediaType,
-    NumMedia: numMedia
-  } = req.body;
-
-  const numeroLimpio = telefono.replace('whatsapp:', '');
-  const sesion = obtenerSesion(numeroLimpio);
-
-  console.log(`[WA ${numeroLimpio}] Mensaje: "${mensaje}" | Media: ${numMedia || 0}`);
-
-  try {
-    let respuesta;
-
-    // Si envió un documento/imagen
-    if (numMedia > 0 && mediaUrl) {
-      console.log(`[WA ${numeroLimpio}] Documento recibido: ${mediaType}`);
-
-      // Validar documento con IA
-      const resultadoValidacion = await validarDocumento({
-        url: mediaUrl,
-        tipo: mediaType,
-        telefono: numeroLimpio,
-        sesion
-      });
-
-      respuesta = resultadoValidacion.mensaje;
-      if (resultadoValidacion.datosExtraidos) {
-        sesion.datos = { ...sesion.datos, ...resultadoValidacion.datosExtraidos };
-      }
-    } else {
-      // Procesar mensaje de texto con IA
-      const resultado = await procesarConIA(mensaje, {
-        canal: 'whatsapp',
-        telefono: numeroLimpio,
-        sesion
-      });
-
-      respuesta = resultado.mensaje;
-      if (resultado.nuevosDatos) {
-        sesion.datos = { ...sesion.datos, ...resultado.nuevosDatos };
-      }
-      if (resultado.nuevoPaso) {
-        sesion.paso = resultado.nuevoPaso;
-      }
-    }
-
-    // Guardar en historial
-    sesion.historial.push({ rol: 'usuario', mensaje, timestamp: Date.now() });
-    sesion.historial.push({ rol: 'asistente', mensaje: respuesta, timestamp: Date.now() });
-
-    // Enviar respuesta
-    await enviarMensaje(telefono, respuesta);
-
-    res.status(200).send('OK');
-  } catch (error) {
-    console.error('Error en WhatsApp:', error);
-    await enviarMensaje(telefono, 'Disculpa, tuve un problema. ¿Podrías intentar de nuevo?');
-    res.status(200).send('OK');
-  }
-}
-
-// Enviar mensaje de WhatsApp
-export async function enviarMensaje(telefono, mensaje, opciones = {}) {
-  if (!client) {
-    throw new Error('WhatsApp no está configurado');
-  }
-
-  const numeroFormateado = telefono.startsWith('whatsapp:') ? telefono : `whatsapp:${telefono}`;
-
-  const params = {
-    from: WHATSAPP_NUMBER,
-    to: numeroFormateado,
-    body: mensaje
-  };
-
-  // Si hay imagen adjunta
-  if (opciones.mediaUrl) {
-    params.mediaUrl = [opciones.mediaUrl];
-  }
-
-  const msg = await client.messages.create(params);
-  return msg.sid;
-}
-
-// Enviar mensaje con botones (template)
-export async function enviarMensajeConBotones(telefono, mensaje, botones) {
-  // Nota: Los botones interactivos requieren WhatsApp Business API aprobada
-  // Por ahora, enviamos las opciones como texto
-  let textoCompleto = mensaje + '\n\n';
-  botones.forEach((btn, i) => {
-    textoCompleto += `${i + 1}. ${btn.texto}\n`;
-  });
-  textoCompleto += '\n_Responde con el número de tu opción_';
-
-  return enviarMensaje(telefono, textoCompleto);
-}
-
-// Enviar documento
-export async function enviarDocumento(telefono, urlDocumento, caption = '') {
-  return enviarMensaje(telefono, caption, { mediaUrl: urlDocumento });
-}
-
-// Limpiar sesiones inactivas (llamar periódicamente)
-export function limpiarSesionesInactivas(maxInactividadMs = 3600000) { // 1 hora
+function limpiarSesionesInactivas(maxInactividadMs = 3600000) {
   const ahora = Date.now();
   for (const [telefono, sesion] of sesiones) {
     if (ahora - sesion.ultimaActividad > maxInactividadMs) {
       sesiones.delete(telefono);
-      console.log(`Sesión expirada: ${telefono}`);
+      console.log(`[WA] Sesión expirada: ${telefono}`);
     }
   }
 }
 
-// Obtener todas las sesiones activas
-export function obtenerSesionesActivas() {
+function obtenerSesionesActivas() {
   return Array.from(sesiones.values());
+}
+
+// ─── Verificación del Webhook (Meta requiere esto al configurar) ─────
+
+export function verificarWebhook(req, res) {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  const cfg = obtenerConfig();
+
+  if (mode === 'subscribe' && token === cfg.verifyToken) {
+    console.log('✅ [WA] Webhook verificado por Meta');
+    return res.status(200).send(challenge);
+  }
+
+  console.log('❌ [WA] Verificación fallida:', { mode, token });
+  return res.status(403).send('Forbidden');
+}
+
+// ─── Webhook: Recibir mensajes de Meta ───────────────────────────────
+
+export async function handleIncomingMessage(req, res, procesarConIA, validarDocumento) {
+  // Meta siempre espera 200 inmediato
+  res.status(200).send('OK');
+
+  try {
+    const body = req.body;
+
+    // Verificar que sea un evento de mensaje
+    if (!body?.object || body.object !== 'whatsapp_business_account') return;
+
+    const entries = body.entry || [];
+    for (const entry of entries) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        if (change.field !== 'messages') continue;
+
+        const value = change.value;
+        const messages = value?.messages || [];
+        const contacts = value?.contacts || [];
+
+        for (const msg of messages) {
+          const telefono = msg.from; // Número del remitente (sin +)
+          const nombreContacto = contacts[0]?.profile?.name || telefono;
+          const msgType = msg.type;
+
+          console.log(`💬 [WA] Mensaje de ${nombreContacto} (${telefono}): tipo=${msgType}`);
+
+          // Marcar como leído
+          await marcarComoLeido(msg.id);
+
+          // Indicador de "escribiendo..."
+          await enviarIndicadorEscribiendo(telefono);
+
+          const sesion = obtenerSesion(telefono);
+          sesion.nombreContacto = nombreContacto;
+
+          let respuesta = '';
+
+          if (msgType === 'text' && msg.text?.body) {
+            const texto = msg.text.body;
+            console.log(`💬 [WA] Texto: "${texto}"`);
+
+            if (procesarConIA) {
+              try {
+                const resultado = await procesarConIA(texto, {
+                  canal: 'whatsapp',
+                  telefono,
+                  sesion: {
+                    historial: sesion.historial,
+                    datos: sesion.datos
+                  }
+                });
+                respuesta = resultado.mensaje || resultado;
+                if (resultado.nuevosDatos) {
+                  sesion.datos = { ...sesion.datos, ...resultado.nuevosDatos };
+                }
+              } catch (e) {
+                console.error('❌ [WA] Error IA:', e.message);
+                respuesta = 'Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentar de nuevo?';
+              }
+            } else {
+              respuesta = '¡Hola! Soy el asesor de pensiones del IMSS. El sistema de IA no está disponible en este momento, pero puedo ayudarte pronto.';
+            }
+
+            // Guardar en historial
+            sesion.historial.push({ rol: 'usuario', mensaje: texto, timestamp: Date.now() });
+            sesion.historial.push({ rol: 'asistente', mensaje: respuesta, timestamp: Date.now() });
+
+          } else if (msgType === 'image' || msgType === 'document') {
+            // Documento o imagen
+            const mediaId = msg[msgType]?.id;
+            const caption = msg[msgType]?.caption || '';
+            console.log(`📎 [WA] Media recibido: ${msgType}, id=${mediaId}`);
+
+            if (validarDocumento && mediaId) {
+              try {
+                const mediaUrl = await obtenerUrlMedia(mediaId);
+                const resultado = await validarDocumento({
+                  url: mediaUrl,
+                  tipo: msgType,
+                  telefono,
+                  sesion
+                });
+                respuesta = resultado.mensaje || 'Documento recibido. Lo estoy analizando.';
+              } catch (e) {
+                console.error('❌ [WA] Error validando documento:', e);
+                respuesta = 'Recibí tu documento pero no pude procesarlo. ¿Podrías enviarlo de nuevo?';
+              }
+            } else {
+              respuesta = 'Recibí tu archivo. Por ahora solo puedo procesar mensajes de texto. ¿En qué puedo ayudarte?';
+            }
+
+          } else if (msgType === 'audio') {
+            respuesta = 'Recibí tu audio. Por ahora solo puedo procesar mensajes de texto. ¿Podrías escribirme tu pregunta?';
+
+          } else if (msgType === 'location') {
+            respuesta = 'Recibí tu ubicación. ¿En qué puedo ayudarte con tu trámite del IMSS?';
+
+          } else {
+            // Tipo no soportado
+            respuesta = '¡Hola! Puedo ayudarte con preguntas sobre pensiones IMSS. Escríbeme tu duda.';
+          }
+
+          // Enviar respuesta
+          if (respuesta) {
+            await enviarMensaje(telefono, respuesta);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ [WA] Error procesando webhook:', error);
+  }
+}
+
+// ─── Enviar mensaje ──────────────────────────────────────────────────
+
+export async function enviarMensaje(telefono, texto) {
+  const cfg = obtenerConfig();
+  if (!cfg.token) throw new Error('WhatsApp no configurado — falta WHATSAPP_TOKEN');
+
+  // Asegurar formato: solo dígitos, sin + ni whatsapp:
+  const numero = telefono.replace(/\D/g, '');
+
+  const url = `${GRAPH_API}/${cfg.phoneId}/messages`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: numero,
+      type: 'text',
+      text: { body: texto }
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error('❌ [WA] Error enviando mensaje:', data);
+    throw new Error(`Meta API error: ${data.error?.message || JSON.stringify(data)}`);
+  }
+
+  console.log(`📤 [WA] Mensaje enviado a ${numero}: "${texto.substring(0, 50)}..."`);
+  return data.messages?.[0]?.id || data;
+}
+
+// ─── Marcar como leído ───────────────────────────────────────────────
+
+async function marcarComoLeido(messageId) {
+  try {
+    const cfg = obtenerConfig();
+    await fetch(`${GRAPH_API}/${cfg.phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cfg.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        status: 'read',
+        message_id: messageId
+      })
+    });
+  } catch (e) {
+    // No es crítico si falla
+  }
+}
+
+// ─── Indicador de escribiendo ────────────────────────────────────────
+
+async function enviarIndicadorEscribiendo(telefono) {
+  try {
+    const cfg = obtenerConfig();
+    const numero = telefono.replace(/\D/g, '');
+    await fetch(`${GRAPH_API}/${cfg.phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cfg.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: numero,
+        type: 'reaction',
+        // Tweak: no hay "typing indicator" directo en Cloud API,
+        // pero marcar como leído da feedback visual al usuario
+      })
+    });
+  } catch (e) {
+    // No es crítico
+  }
+}
+
+// ─── Obtener URL de media (para descargar imágenes/documentos) ──────
+
+async function obtenerUrlMedia(mediaId) {
+  const cfg = obtenerConfig();
+  const response = await fetch(`${GRAPH_API}/${mediaId}`, {
+    headers: { 'Authorization': `Bearer ${cfg.token}` }
+  });
+  const data = await response.json();
+  return data.url;
+}
+
+// ─── Enviar imagen ───────────────────────────────────────────────────
+
+export async function enviarImagen(telefono, imageUrl, caption = '') {
+  const cfg = obtenerConfig();
+  const numero = telefono.replace(/\D/g, '');
+
+  const response = await fetch(`${GRAPH_API}/${cfg.phoneId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: numero,
+      type: 'image',
+      image: { link: imageUrl, caption }
+    })
+  });
+
+  return response.json();
+}
+
+// ─── Enviar documento ────────────────────────────────────────────────
+
+export async function enviarDocumento(telefono, documentUrl, filename = 'documento.pdf', caption = '') {
+  const cfg = obtenerConfig();
+  const numero = telefono.replace(/\D/g, '');
+
+  const response = await fetch(`${GRAPH_API}/${cfg.phoneId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      messaging_product: 'whatsapp',
+      to: numero,
+      type: 'document',
+      document: { link: documentUrl, filename, caption }
+    })
+  });
+
+  return response.json();
 }
 
 export default {
   initWhatsApp,
+  verificarWebhook,
   handleIncomingMessage,
   enviarMensaje,
-  enviarMensajeConBotones,
+  enviarImagen,
   enviarDocumento,
   obtenerSesion,
   limpiarSesionesInactivas,
