@@ -535,14 +535,13 @@ function App() {
     <div className="app" >
       <header>
         <div className="logo">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          <h1>Calculadora Modalidad 40</h1>
+          <img src="/nexus-logo.png" alt="NEXUS Tech Hub" style={{ width: '42px', height: '42px', borderRadius: '10px' }} />
+          <div>
+            <h1 style={{ fontSize: '20px', letterSpacing: '1px', margin: 0 }}>NEXUS <span style={{ color: '#00d4ff', fontWeight: 300 }}>Tech Hub</span></h1>
+            <p style={{ fontSize: '11px', color: '#64748b', margin: 0, letterSpacing: '2px', textTransform: 'uppercase' }}>Asesoría IMSS Inteligente</p>
+          </div>
         </div>
-        <p className="subtitle">IMSS - Ley 73 | Agente Experto con RAG</p>
+        <p className="subtitle">Modalidad 40 & 10 | Agente IA con RAG</p>
       </header>
 
       <nav className="tabs">
