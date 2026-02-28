@@ -21,6 +21,8 @@ function CRM() {
   const [agentesVoz, setAgentesVoz] = useState([]) // IA Voice Agents
   const [llamadas, setLlamadas] = useState([]) // Call History
   const [llamadaSeleccionada, setLlamadaSeleccionada] = useState(null) // Selected call for transcript view
+  const [sesionesWA, setSesionesWA] = useState([]) // WhatsApp sessions
+  const [sesionWASeleccionada, setSesionWASeleccionada] = useState(null)
 
   // Selected items
   const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null)
@@ -291,6 +293,23 @@ function CRM() {
     } catch (err) {
       console.error('Error cargando llamadas:', err)
       setLlamadas([])
+    }
+    setLoading(false)
+  }
+
+  const cargarSesionesWA = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/whatsapp/sesiones')
+      const data = await res.json()
+      if (data.success) {
+        setSesionesWA(data.data || [])
+      } else {
+        setSesionesWA([])
+      }
+    } catch (err) {
+      console.error('Error cargando sesiones WA:', err)
+      setSesionesWA([])
     }
     setLoading(false)
   }
@@ -580,6 +599,9 @@ function CRM() {
       case 'llamadas':
         cargarLlamadas()
         break
+      case 'whatsapp':
+        cargarSesionesWA()
+        break
     }
   }
 
@@ -640,6 +662,9 @@ function CRM() {
         </button>
         <button className={vista === 'llamadas' ? 'active' : ''} onClick={() => cambiarVista('llamadas')}>
           📞 Llamadas
+        </button>
+        <button className={vista === 'whatsapp' ? 'active' : ''} onClick={() => cambiarVista('whatsapp')}>
+          💬 WhatsApp
         </button>
 
         <div className="crm-nav-phone" style={{ marginTop: 'auto', padding: '10px' }}>
@@ -2230,6 +2255,123 @@ function CRM() {
                   {llamadaSeleccionada?.call_sid === llamada.call_sid && !llamada.transcript && (
                     <div style={{ marginTop: '12px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
                       Sin transcripción disponible para esta llamada.
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ==================== CONVERSACIONES WHATSAPP ==================== */}
+      {vista === 'whatsapp' && (
+        <div className="crm-section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>{'\ud83d\udcac'} Conversaciones WhatsApp</h2>
+            <button onClick={cargarSesionesWA} style={{ padding: '8px 16px', borderRadius: '8px', background: '#25d366', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+              {'\ud83d\udd04'} Actualizar
+            </button>
+          </div>
+
+          {sesionesWA.length === 0 && !loading && (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+              <p style={{ fontSize: '48px' }}>{'\ud83d\udcac'}</p>
+              <p>No hay conversaciones activas.</p>
+              <p style={{ fontSize: '14px' }}>Las conversaciones aparecer{'\u00e1'}n aqu{'\u00ed'} cuando alguien escriba por WhatsApp.</p>
+            </div>
+          )}
+
+          {sesionesWA.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {sesionesWA.map((sesion, idx) => (
+                <div key={sesion.telefono || idx} style={{
+                  background: sesionWASeleccionada?.telefono === sesion.telefono ? '#1e3a5f' : '#1e293b',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  border: sesionWASeleccionada?.telefono === sesion.telefono ? '1px solid #25d366' : '1px solid #334155',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }} onClick={() => setSesionWASeleccionada(sesionWASeleccionada?.telefono === sesion.telefono ? null : sesion)}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '28px', background: '#25d366', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {'\ud83d\udcac'}
+                      </span>
+                      <div>
+                        <div style={{ fontWeight: 'bold', color: '#e2e8f0', fontSize: '16px' }}>
+                          {sesion.nombreContacto || sesion.telefono}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                          +{sesion.telefono} {'\u2022'} {sesion.historial?.length || 0} mensajes
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        display: 'inline-block',
+                        padding: '2px 10px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        background: '#065f46',
+                        color: '#e2e8f0'
+                      }}>
+                        {sesion.paso || 'activa'}
+                      </div>
+                      {sesion.ultimaActividad && (
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                          {new Date(sesion.ultimaActividad).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Chat expandible */}
+                  {sesionWASeleccionada?.telefono === sesion.telefono && sesion.historial?.length > 0 && (
+                    <div style={{
+                      marginTop: '16px',
+                      padding: '16px',
+                      background: '#0f172a',
+                      borderRadius: '8px',
+                      borderLeft: '3px solid #25d366',
+                      maxHeight: '400px',
+                      overflowY: 'auto'
+                    }}>
+                      <h4 style={{ color: '#25d366', marginBottom: '12px', fontSize: '14px' }}>
+                        {'\ud83d\udcdd'} Conversaci{'\u00f3'}n
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {sesion.historial.map((msg, i) => (
+                          <div key={i} style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: msg.rol === 'usuario' ? 'flex-start' : 'flex-end'
+                          }}>
+                            <div style={{
+                              maxWidth: '80%',
+                              padding: '8px 12px',
+                              borderRadius: msg.rol === 'usuario' ? '4px 12px 12px 12px' : '12px 4px 12px 12px',
+                              background: msg.rol === 'usuario' ? '#1e40af' : '#065f46',
+                              color: '#e2e8f0',
+                              fontSize: '14px',
+                              lineHeight: '1.5'
+                            }}>
+                              {msg.mensaje}
+                            </div>
+                            <span style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', padding: '0 4px' }}>
+                              {msg.rol === 'usuario' ? '\ud83d\udc64' : '\ud83e\udd16'} {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {sesionWASeleccionada?.telefono === sesion.telefono && (!sesion.historial || sesion.historial.length === 0) && (
+                    <div style={{ marginTop: '12px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
+                      Sin mensajes registrados en esta sesi{'\u00f3'}n.
                     </div>
                   )}
                 </div>

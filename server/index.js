@@ -773,6 +773,20 @@ app.post('/api/whatsapp/enviar', async (req, res) => {
   }
 });
 
+// Obtener todas las sesiones/conversaciones activas de WhatsApp
+app.get('/api/whatsapp/sesiones', (req, res) => {
+  if (!whatsapp) {
+    return res.json({ success: true, data: [] });
+  }
+  try {
+    const sesiones = whatsapp.default.obtenerSesionesActivas();
+    res.json({ success: true, data: sesiones });
+  } catch (err) {
+    console.error('Error obteniendo sesiones WA:', err);
+    res.json({ success: true, data: [] });
+  }
+});
+
 // Alias para compatibilidad (el usuario puede haber configurado este en Twilio)
 app.post('/api/voice/incoming', (req, res) => {
   const { Called, Caller, CallSid } = req.body;
