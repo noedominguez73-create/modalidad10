@@ -17,6 +17,7 @@
 import settings from '../settings.js';
 import agentesVoz from '../crm/agentes-voz.js';
 import callsDb from '../crm/calls-db.js';
+import { calcularModalidad10 } from '../calculadora-mod10.js';
 
 // ─── Cache de audio Deepgram (solo para otros canales, NO para voz telefónica) ─
 const audioCache = new Map();
@@ -166,6 +167,102 @@ export async function handleIncomingCall(req, res) {
 
 // ─── PASO 2: CICLO DE CONVERSACIÓN ───────────────────────────────────
 
+// ─── HELPERS CALCULADORA MOD10 PARA VOZ ──────────────────────────────
+
+function detectarCalculoMod10(respuestaIA) {
+  const regex = /\[CALCULAR_MOD10\]\s*\{([^}]+)\}/;
+  const match = respuestaIA.match(regex);
+  if (!match) return null;
+  try {
+    const jsonStr = '{' + match[1] + '}';
+    const datos = JSON.parse(jsonStr);
+    console.log('🧮 [VOICE] Detectado cálculo Mod10:', datos);
+    return datos;
+  } catch (e) {
+    console.error('❌ [VOICE] Error parseando JSON de cálculo:', e.message);
+    return null;
+  }
+}
+
+function formatearResultadoMod10(resultado) {
+  const r = resultado;
+  const totalMensual = r.periodos?.mensual?.totalConInfonavit || r.periodos?.mensual?.total || r.totalMensual || 0;
+  const cuotaFija = r.desglose?.cuotaFija || 0;
+  const riesgo = r.desglose?.riesgoTrabajo || 0;
+  const retiro = r.desglose?.retiro || 0;
+  const cesantia = (r.desglose?.cesantiaPatron || 0) + (r.desglose?.cesantiaObrero || 0);
+
+  let texto = `RESULTADO DEL CALCULO MODALIDAD 10:\n`;
+  texto += `- Cuota mensual total: $${totalMensual.toFixed(2)} pesos\n`;
+  texto += `- Incluye: cuota fija $${cuotaFija.toFixed(2)}, riesgo de trabajo $${riesgo.toFixed(2)}, `;
+  texto += `retiro $${retiro.toFixed(2)}, cesantia y vejez $${cesantia.toFixed(2)}\n`;
+
+  if (r.periodos?.bimestral) {
+    texto += `- Pago bimestral: $${(r.periodos.bimestral.totalConInfonavit || r.periodos.bimestral.total || 0).toFixed(2)}\n`;
+  }
+  if (r.periodos?.anual) {
+    texto += `- Pago anual: $${(r.periodos.anual.totalConInfonavit || r.periodos.anual.total || 0).toFixed(2)}\n`;
+  }
+
+  texto += `\nExplica estos resultados al usuario de forma clara y amigable por telefono. `;
+  texto += `Menciona el total mensual primero, luego los desgloses principales. `;
+  texto += `Usa lenguaje natural, di los montos en palabras (ejemplo: dos mil ochocientos cuarenta y siete pesos con cincuenta centavos). `;
+  texto += `Maximo 3-4 oraciones.`;
+
+  return texto;
+}
+
+async function ejecutarCalculoYResponder(datosMod10, systemPrompt, greeting, turnosAnteriores, apiKeys) {
+  try {
+    // Normalizar zona
+    let zona = (datosMod10.zona || 'centro').toLowerCase();
+    if (zona.includes('fronter')) zona = 'fronteriza';
+    else if (zona.includes('centro') || zona.includes('resto') || zona.includes('pais')) zona = 'centro';
+
+    const datosCalc = {
+      salarioMensual: parseFloat(datosMod10.salarioMensual) || parseFloat(datosMod10.ingreso) || 15000,
+      zona,
+      claseRiesgo: datosMod10.claseRiesgo || 'I',
+      periodoPago: datosMod10.periodoPago || 'mensual'
+    };
+
+    console.log('🧮 [VOICE] Calculando Mod10 con:', datosCalc);
+    const resultado = calcularModalidad10(datosCalc);
+    const contextoResultado = formatearResultadoMod10(resultado);
+
+    // Segundo llamado a la IA para que verbalice el resultado
+    let respuestaVerbal = '';
+    if (apiKeys.gemini) {
+      respuestaVerbal = await llamarGemini(
+        contextoResultado,
+        systemPrompt + '\nAhora debes comunicar al usuario los resultados del calculo. Se claro y amigable.',
+        greeting,
+        turnosAnteriores,
+        apiKeys.gemini
+      );
+    } else if (apiKeys.openai) {
+      respuestaVerbal = await llamarOpenAI(
+        contextoResultado,
+        systemPrompt + '\nAhora debes comunicar al usuario los resultados del calculo. Se claro y amigable.',
+        greeting,
+        turnosAnteriores,
+        apiKeys.openai
+      );
+    } else {
+      // Fallback: formatear directamente
+      const total = resultado.periodos?.mensual?.total || resultado.totalMensual || 0;
+      respuestaVerbal = `Tu cuota mensual de Modalidad 10 sería de aproximadamente ${total.toFixed(2)} pesos. ¿Te gustaría saber más detalles o tienes otra pregunta?`;
+    }
+
+    return limpiarParaVoz(respuestaVerbal);
+  } catch (error) {
+    console.error('❌ [VOICE] Error en cálculo Mod10:', error.message);
+    return `Disculpa, hubo un error al calcular: ${error.message}. ¿Podrías verificar los datos?`;
+  }
+}
+
+// ─── PASO 2: CICLO DE CONVERSACIÓN ───────────────────────────────────
+
 export async function handleVoiceRespond(req, res) {
   const { SpeechResult = '', CallSid = '', Confidence = '' } = req.body || {};
   const { agent_id, call_sid: qCallSid } = req.query;
@@ -220,8 +317,19 @@ export async function handleVoiceRespond(req, res) {
       }
     }
 
-    // Limpiar respuesta para voz (sin markdown)
-    const respuestaLimpia = limpiarParaVoz(respuestaIA);
+    // ─── DETECCIÓN DE CÁLCULO MODALIDAD 10 ───────────────────────
+    const datosMod10 = detectarCalculoMod10(respuestaIA);
+    let respuestaLimpia;
+
+    if (datosMod10) {
+      console.log('🧮 [VOICE] Ejecutando cálculo Modalidad 10...');
+      respuestaLimpia = await ejecutarCalculoYResponder(
+        datosMod10, systemPrompt, greeting, turnosAnteriores, apiKeys
+      );
+    } else {
+      // Limpiar respuesta normal para voz (sin markdown)
+      respuestaLimpia = limpiarParaVoz(respuestaIA);
+    }
 
     // Guardar en historial
     callsDb.agregarTranscript(callSid, SpeechResult, respuestaLimpia);
