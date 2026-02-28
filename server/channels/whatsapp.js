@@ -22,10 +22,12 @@ setInterval(() => limpiarSesionesInactivas(), 3600000); // Limpiar cada hora
 
 function obtenerConfig() {
   const cfg = settings.cargarSettings();
+  // IMPORTANTE: Limpiar espacios/saltos de línea del token (Railway a veces los añade)
+  const rawToken = process.env.WHATSAPP_TOKEN || cfg.whatsapp?.token || '';
   return {
-    token: process.env.WHATSAPP_TOKEN || cfg.whatsapp?.token || '',
-    phoneId: process.env.WHATSAPP_PHONE_ID || cfg.whatsapp?.phoneId || '773416909191493',
-    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || cfg.whatsapp?.verifyToken || 'asesoriaimss_verify_2024'
+    token: rawToken.replace(/\s+/g, ''),
+    phoneId: (process.env.WHATSAPP_PHONE_ID || cfg.whatsapp?.phoneId || '773416909191493').trim(),
+    verifyToken: (process.env.WHATSAPP_VERIFY_TOKEN || cfg.whatsapp?.verifyToken || 'asesoriaimss_verify_2024').trim()
   };
 }
 
