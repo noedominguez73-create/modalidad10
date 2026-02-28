@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import TwilioPhone from './components/TwilioPhone'
 import CreateVoiceAgent from './components/CreateVoiceAgent'
 
@@ -334,7 +334,7 @@ function CRM() {
   }
 
   const eliminarAgenteVoz = async (id) => {
-    if (!window.confirm('Â¿EstÃ¡s seguro de que deseas eliminar este agente?')) return
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este agente?')) return
     setLoading(true)
     try {
       const res = await fetch(`/api/agentes/${id}`, { method: 'DELETE' })
@@ -343,7 +343,7 @@ function CRM() {
         mostrarMensaje('Agente eliminado', 'success')
         cargarAgentesVoz()
       } else mostrarMensaje(data.error || 'Error', 'error')
-    } catch (err) { mostrarMensaje('Error de conexiÃ³n', 'error') }
+    } catch (err) { mostrarMensaje('Error de conexión', 'error') }
     setLoading(false)
   }
 
@@ -665,25 +665,25 @@ function CRM() {
       {/* Navegacion principal */}
       <div className="crm-nav">
         <button className={vista === 'dashboard' ? 'active' : ''} onClick={() => cambiarVista('dashboard')}>
-          ðŸ“Š Dashboard
+          📊 Dashboard
         </button>
         <button className={vista === 'prospectos' ? 'active' : ''} onClick={() => cambiarVista('prospectos')}>
-          ðŸ‘¥ Prospectos
+          👥 Prospectos
         </button>
         <button className={vista === 'clientes' ? 'active' : ''} onClick={() => cambiarVista('clientes')}>
-          ðŸ§‘â€ðŸ’¼ Clientes
+          🧑‍💼 Clientes
         </button>
         <button className={vista === 'pagos' ? 'active' : ''} onClick={() => cambiarVista('pagos')}>
-          ðŸ’° Pagos
+          💰 Pagos
         </button>
         <button className={vista === 'historial' ? 'active' : ''} onClick={() => cambiarVista('historial')}>
-          ðŸ“œ Historial
+          📜 Historial
         </button>
         <button className={vista === 'notificaciones' ? 'active' : ''} onClick={() => cambiarVista('notificaciones')}>
-          ðŸ“± Notificaciones
+          📱 Notificaciones
         </button>
         <button className={vista === 'llamadas' ? 'active' : ''} onClick={() => cambiarVista('llamadas')}>
-          ðŸ“ž Llamadas
+          📞 Llamadas
         </button>
         <button className={vista === 'whatsapp' ? 'active' : ''} onClick={() => cambiarVista('whatsapp')}>
           💬 WhatsApp
@@ -700,14 +700,14 @@ function CRM() {
       {/* Mensajes */}
       {mensaje && (
         <div className={`crm-mensaje ${mensajeTipo}`}>
-          {mensajeTipo === 'success' && 'âœ… '}
-          {mensajeTipo === 'error' && 'âŒ '}
-          {mensajeTipo === 'info' && 'â„¹ï¸ '}
+          {mensajeTipo === 'success' && '✅ '}
+          {mensajeTipo === 'error' && '❌ '}
+          {mensajeTipo === 'info' && 'ℹ️ '}
           {mensaje}
         </div>
       )}
 
-      {loading && <div className="crm-loading">â³ Cargando...</div>}
+      {loading && <div className="crm-loading">⏳ Cargando...</div>}
 
       {/* ==================== CREAR AGENTE VOZ ==================== */}
       {vista === 'notificaciones' && subVista === 'crear-agente' && (
@@ -727,11 +727,11 @@ function CRM() {
       {/* ==================== DASHBOARD ==================== */}
       {vista === 'dashboard' && dashboard && (
         <div className="crm-dashboard">
-          <h2>ðŸ“Š Dashboard CRM</h2>
+          <h2>📊 Dashboard CRM</h2>
 
           <div className="dashboard-stats">
             <div className="stat-card prospectos" onClick={() => cambiarVista('prospectos')}>
-              <div className="stat-icon">ðŸ‘¥</div>
+              <div className="stat-icon">👥</div>
               <div className="stat-info">
                 <span className="stat-number">{dashboard.prospectos.total}</span>
                 <span className="stat-label">Prospectos</span>
@@ -742,7 +742,7 @@ function CRM() {
             </div>
 
             <div className="stat-card clientes" onClick={() => cambiarVista('clientes')}>
-              <div className="stat-icon">ðŸ§‘â€ðŸ’¼</div>
+              <div className="stat-icon">🧑‍💼</div>
               <div className="stat-info">
                 <span className="stat-number">{dashboard.clientes.activos}</span>
                 <span className="stat-label">Clientes Activos</span>
@@ -753,7 +753,7 @@ function CRM() {
             </div>
 
             <div className="stat-card pagos" onClick={() => cambiarVista('pagos')}>
-              <div className="stat-icon">ðŸ’°</div>
+              <div className="stat-icon">💰</div>
               <div className="stat-info">
                 <span className="stat-number">{dashboard.pagos.pagosMes}</span>
                 <span className="stat-label">Pagos del Mes</span>
@@ -764,7 +764,7 @@ function CRM() {
             </div>
 
             <div className="stat-card pendientes" onClick={() => cambiarVista('pagos')}>
-              <div className="stat-icon">â³</div>
+              <div className="stat-icon">⏳</div>
               <div className="stat-info">
                 <span className="stat-number">{dashboard.pendientes.pagosPorMatch + dashboard.pendientes.pagosPorIMSS}</span>
                 <span className="stat-label">Pendientes</span>
@@ -777,7 +777,7 @@ function CRM() {
 
           <div className="dashboard-grid">
             <div className="dashboard-section">
-              <h3>ðŸ“ˆ Resumen del Mes</h3>
+              <h3>📈 Resumen del Mes</h3>
               <div className="resumen-grid">
                 <div className="resumen-item">
                   <span className="resumen-label">Total Recibido</span>
@@ -799,7 +799,7 @@ function CRM() {
             </div>
 
             <div className="dashboard-section">
-              <h3>ðŸ‘¥ Prospectos por Estatus</h3>
+              <h3>👥 Prospectos por Estatus</h3>
               <div className="estatus-list">
                 {Object.entries(dashboard.prospectos.porEstatus).map(([status, count]) => (
                   <div key={status} className="estatus-item">
@@ -814,7 +814,7 @@ function CRM() {
             </div>
 
             <div className="dashboard-section">
-              <h3>ðŸ·ï¸ Clientes por Modalidad</h3>
+              <h3>🏷️ Clientes por Modalidad</h3>
               <div className="modalidad-list">
                 {Object.entries(dashboard.clientes.porModalidad).map(([mod, count]) => (
                   <div key={mod} className="modalidad-item">
@@ -829,16 +829,16 @@ function CRM() {
             </div>
 
             <div className="dashboard-section">
-              <h3>ðŸ’³ Pagos por Metodo</h3>
+              <h3>💳 Pagos por Metodo</h3>
               <div className="metodo-list">
                 {Object.entries(dashboard.pagos.porMetodo).map(([metodo, count]) => (
                   <div key={metodo} className="metodo-item">
                     <span className="metodo-icon">
-                      {metodo === 'paypal' && 'ðŸ’³'}
-                      {metodo === 'zelle' && 'ðŸ¦'}
-                      {metodo === 'westernUnion' && 'ðŸ’µ'}
-                      {metodo === 'venmo' && 'ðŸ“±'}
-                      {metodo === 'transferenciaMX' && 'ðŸ‡²ðŸ‡½'}
+                      {metodo === 'paypal' && '💳'}
+                      {metodo === 'zelle' && '🏦'}
+                      {metodo === 'westernUnion' && '💵'}
+                      {metodo === 'venmo' && '📱'}
+                      {metodo === 'transferenciaMX' && '🇲🇽'}
                     </span>
                     <span className="metodo-nombre">{metodo}</span>
                     <span className="metodo-count">{count}</span>
@@ -853,19 +853,19 @@ function CRM() {
 
           {/* Acciones rapidas */}
           <div className="acciones-rapidas">
-            <h3>âš¡ Acciones Rapidas</h3>
+            <h3>⚡ Acciones Rapidas</h3>
             <div className="acciones-grid">
               <button onClick={() => { cambiarVista('prospectos'); setSubVista('nuevo'); }}>
-                âž• Nuevo Prospecto
+                ➕ Nuevo Prospecto
               </button>
               <button onClick={() => { cambiarVista('pagos'); setSubVista('nuevo-pago'); }}>
-                ðŸ’° Registrar Pago
+                💰 Registrar Pago
               </button>
               <button onClick={() => cambiarVista('notificaciones')}>
-                ðŸ“± Ver Recordatorios
+                📱 Ver Recordatorios
               </button>
               <button onClick={() => cambiarVista('historial')}>
-                ðŸ“œ Ver Historial
+                📜 Ver Historial
               </button>
             </div>
           </div>
@@ -876,9 +876,9 @@ function CRM() {
       {vista === 'prospectos' && !subVista && (
         <div className="crm-prospectos">
           <div className="vista-header">
-            <h2>ðŸ‘¥ Gestion de Prospectos</h2>
+            <h2>👥 Gestion de Prospectos</h2>
             <button className="btn-primary" onClick={() => setSubVista('nuevo')}>
-              âž• Nuevo Prospecto
+              ➕ Nuevo Prospecto
             </button>
           </div>
 
@@ -886,7 +886,7 @@ function CRM() {
           <div className="filtros-bar">
             <input
               type="text"
-              placeholder="ðŸ” Buscar por nombre, NSS, email, telefono..."
+              placeholder="🔍 Buscar por nombre, NSS, email, telefono..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="busqueda-input"
@@ -919,18 +919,18 @@ function CRM() {
                 </div>
                 <div className="card-body">
                   <div className="info-row">
-                    <span>ðŸ“± {p.whatsapp || p.telefonoUSA || 'Sin telefono'}</span>
+                    <span>📱 {p.whatsapp || p.telefonoUSA || 'Sin telefono'}</span>
                   </div>
                   <div className="info-row">
-                    <span>ðŸ“§ {p.email || 'Sin email'}</span>
+                    <span>📧 {p.email || 'Sin email'}</span>
                   </div>
                   <div className="info-row">
-                    <span>ðŸ”¢ NSS: {p.nss || 'Pendiente'}</span>
-                    <span>ðŸ·ï¸ Mod {p.modalidadInteres}</span>
+                    <span>🔢 NSS: {p.nss || 'Pendiente'}</span>
+                    <span>🏷️ Mod {p.modalidadInteres}</span>
                   </div>
                   <div className="info-row muted">
-                    <span>ðŸ“… {formatFecha(p.fechaRegistro)}</span>
-                    <span>ðŸ“ž {p.intentosContacto} contactos</span>
+                    <span>📅 {formatFecha(p.fechaRegistro)}</span>
+                    <span>📞 {p.intentosContacto} contactos</span>
                   </div>
                 </div>
               </div>
@@ -946,8 +946,8 @@ function CRM() {
       {vista === 'prospectos' && subVista === 'nuevo' && (
         <div className="crm-form-view">
           <div className="vista-header">
-            <button className="btn-back" onClick={() => setSubVista(null)}>â† Volver</button>
-            <h2>âž• Nuevo Prospecto</h2>
+            <button className="btn-back" onClick={() => setSubVista(null)}>← Volver</button>
+            <h2>➕ Nuevo Prospecto</h2>
           </div>
 
           <form onSubmit={crearProspecto} className="crm-form">
@@ -1081,14 +1081,14 @@ function CRM() {
       {vista === 'prospectos' && subVista === 'detalle-prospecto' && prospectoSeleccionado && (
         <div className="crm-detalle">
           <div className="vista-header">
-            <button className="btn-back" onClick={() => { setSubVista(null); setProspectoSeleccionado(null); }}>â† Volver</button>
-            <h2>ðŸ‘¤ {prospectoSeleccionado.nombreCompleto}</h2>
+            <button className="btn-back" onClick={() => { setSubVista(null); setProspectoSeleccionado(null); }}>← Volver</button>
+            <h2>👤 {prospectoSeleccionado.nombreCompleto}</h2>
             <span className={`estatus-badge large ${prospectoSeleccionado.estatus}`}>{prospectoSeleccionado.estatus}</span>
           </div>
 
           <div className="detalle-grid">
             <div className="detalle-section">
-              <h3>ðŸ“‹ Datos Personales</h3>
+              <h3>📋 Datos Personales</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">CURP</span>
@@ -1110,7 +1110,7 @@ function CRM() {
             </div>
 
             <div className="detalle-section">
-              <h3>ðŸ“± Contacto</h3>
+              <h3>📱 Contacto</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Telefono USA</span>
@@ -1121,7 +1121,7 @@ function CRM() {
                   <span className="dato-value clickable">
                     {prospectoSeleccionado.whatsapp || 'N/A'}
                     {prospectoSeleccionado.whatsapp && (
-                      <a href={`https://wa.me/${prospectoSeleccionado.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"> ðŸ“±</a>
+                      <a href={`https://wa.me/${prospectoSeleccionado.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"> 📱</a>
                     )}
                   </span>
                 </div>
@@ -1137,7 +1137,7 @@ function CRM() {
             </div>
 
             <div className="detalle-section">
-              <h3>ðŸ·ï¸ Servicio</h3>
+              <h3>🏷️ Servicio</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Modalidad Interes</span>
@@ -1160,7 +1160,7 @@ function CRM() {
 
             {/* Historial de contactos */}
             <div className="detalle-section full-width">
-              <h3>ðŸ“ž Historial de Contactos</h3>
+              <h3>📞 Historial de Contactos</h3>
               {prospectoSeleccionado.historialContactos && prospectoSeleccionado.historialContactos.length > 0 ? (
                 <div className="historial-list">
                   {prospectoSeleccionado.historialContactos.map((c, i) => (
@@ -1204,7 +1204,7 @@ function CRM() {
 
             {/* Notas */}
             <div className="detalle-section full-width">
-              <h3>ðŸ“ Notas</h3>
+              <h3>📝 Notas</h3>
               {prospectoSeleccionado.notas && prospectoSeleccionado.notas.length > 0 ? (
                 <div className="notas-list">
                   {prospectoSeleccionado.notas.map((n, i) => (
@@ -1224,12 +1224,12 @@ function CRM() {
           <div className="detalle-acciones">
             {prospectoSeleccionado.estatus !== 'convertido' && prospectoSeleccionado.nss && prospectoSeleccionado.curp && (
               <button className="btn-primary" onClick={() => setSubVista('convertir')}>
-                ðŸ”„ Convertir a Cliente
+                🔄 Convertir a Cliente
               </button>
             )}
             {prospectoSeleccionado.whatsapp && (
               <a href={`https://wa.me/${prospectoSeleccionado.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-whatsapp">
-                ðŸ“± Abrir WhatsApp
+                📱 Abrir WhatsApp
               </a>
             )}
           </div>
@@ -1240,7 +1240,7 @@ function CRM() {
       {vista === 'prospectos' && subVista === 'convertir' && prospectoSeleccionado && (
         <div className="modal-overlay" onClick={() => setSubVista('detalle-prospecto')}>
           <div className="modal-content large" onClick={e => e.stopPropagation()}>
-            <h3>ðŸ”„ Convertir a Cliente</h3>
+            <h3>🔄 Convertir a Cliente</h3>
             <p className="modal-subtitle">{prospectoSeleccionado.nombreCompleto} - NSS: {prospectoSeleccionado.nss}</p>
 
             <div className="form-section">
@@ -1344,7 +1344,7 @@ function CRM() {
             <div className="modal-actions">
               <button onClick={() => setSubVista('detalle-prospecto')}>Cancelar</button>
               <button className="btn-primary" onClick={() => convertirACliente(prospectoSeleccionado.id)} disabled={loading}>
-                {loading ? 'Convirtiendo...' : 'âœ… Convertir a Cliente'}
+                {loading ? 'Convirtiendo...' : '✅ Convertir a Cliente'}
               </button>
             </div>
           </div>
@@ -1355,14 +1355,14 @@ function CRM() {
       {vista === 'clientes' && !subVista && (
         <div className="crm-clientes">
           <div className="vista-header">
-            <h2>ðŸ§‘â€ðŸ’¼ Gestion de Clientes</h2>
+            <h2>🧑‍💼 Gestion de Clientes</h2>
           </div>
 
           {/* Filtros */}
           <div className="filtros-bar">
             <input
               type="text"
-              placeholder="ðŸ” Buscar..."
+              placeholder="🔍 Buscar..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="busqueda-input"
@@ -1391,22 +1391,22 @@ function CRM() {
                 </div>
                 <div className="card-body">
                   <div className="info-row">
-                    <span>ðŸ”¢ NSS: {c.nss}</span>
-                    <span>ðŸ·ï¸ Mod {c.modalidad}</span>
+                    <span>🔢 NSS: {c.nss}</span>
+                    <span>🏷️ Mod {c.modalidad}</span>
                   </div>
                   <div className="info-row highlight">
-                    <span>ðŸ’° {formatMoney(c.totalMensual)}/mes</span>
-                    <span>ðŸ’³ {c.metodoPagoPreferido}</span>
+                    <span>💰 {formatMoney(c.totalMensual)}/mes</span>
+                    <span>💳 {c.metodoPagoPreferido}</span>
                   </div>
                   <div className="info-row">
-                    <span>ðŸ“… Corte: dia {c.fechaCorte}</span>
+                    <span>📅 Corte: dia {c.fechaCorte}</span>
                     <span className={c.mesActualPagado ? 'success' : 'warning'}>
-                      {c.mesActualPagado ? 'âœ… Pagado' : 'â³ Pendiente'}
+                      {c.mesActualPagado ? '✅ Pagado' : '⏳ Pendiente'}
                     </span>
                   </div>
                   <div className="info-row">
                     <span className={c.vigenciaIMSS?.vigente ? 'success' : 'warning'}>
-                      {c.vigenciaIMSS?.vigente ? 'âœ… Vigente' : 'âš ï¸ Verificar vigencia'}
+                      {c.vigenciaIMSS?.vigente ? '✅ Vigente' : '⚠️ Verificar vigencia'}
                     </span>
                   </div>
                 </div>
@@ -1423,15 +1423,15 @@ function CRM() {
       {vista === 'clientes' && subVista === 'detalle-cliente' && clienteSeleccionado && (
         <div className="crm-detalle">
           <div className="vista-header">
-            <button className="btn-back" onClick={() => { setSubVista(null); setClienteSeleccionado(null); }}>â† Volver</button>
-            <h2>ðŸ§‘â€ðŸ’¼ {clienteSeleccionado.nombreCompleto}</h2>
+            <button className="btn-back" onClick={() => { setSubVista(null); setClienteSeleccionado(null); }}>← Volver</button>
+            <h2>🧑‍💼 {clienteSeleccionado.nombreCompleto}</h2>
             <span className={`estatus-badge large ${clienteSeleccionado.estatusServicio}`}>{clienteSeleccionado.estatusServicio}</span>
           </div>
 
           <div className="detalle-grid">
             {/* Datos personales */}
             <div className="detalle-section">
-              <h3>ðŸ“‹ Datos Personales</h3>
+              <h3>📋 Datos Personales</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">CURP</span>
@@ -1454,7 +1454,7 @@ function CRM() {
 
             {/* Contacto */}
             <div className="detalle-section">
-              <h3>ðŸ“± Contacto</h3>
+              <h3>📱 Contacto</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Telefono USA</span>
@@ -1464,7 +1464,7 @@ function CRM() {
                   <span className="dato-label">WhatsApp</span>
                   <span className="dato-value clickable">
                     {clienteSeleccionado.whatsapp}
-                    <a href={`https://wa.me/${clienteSeleccionado.whatsapp?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"> ðŸ“±</a>
+                    <a href={`https://wa.me/${clienteSeleccionado.whatsapp?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"> 📱</a>
                   </span>
                 </div>
                 <div className="dato-item">
@@ -1476,7 +1476,7 @@ function CRM() {
 
             {/* Servicio */}
             <div className="detalle-section highlight-section">
-              <h3>ðŸ·ï¸ Servicio Contratado</h3>
+              <h3>🏷️ Servicio Contratado</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Modalidad</span>
@@ -1507,7 +1507,7 @@ function CRM() {
 
             {/* Ciclo de pago */}
             <div className="detalle-section">
-              <h3>ðŸ“… Ciclo de Pago</h3>
+              <h3>📅 Ciclo de Pago</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Dia de Corte</span>
@@ -1528,7 +1528,7 @@ function CRM() {
                 <div className="dato-item">
                   <span className="dato-label">Estatus Pago</span>
                   <span className={`dato-value ${clienteSeleccionado.mesActualPagado ? 'success' : 'warning'}`}>
-                    {clienteSeleccionado.mesActualPagado ? 'âœ… Pagado' : 'â³ Pendiente'}
+                    {clienteSeleccionado.mesActualPagado ? '✅ Pagado' : '⏳ Pendiente'}
                   </span>
                 </div>
               </div>
@@ -1536,12 +1536,12 @@ function CRM() {
 
             {/* Vigencia IMSS */}
             <div className="detalle-section">
-              <h3>ðŸ¥ Vigencia IMSS</h3>
+              <h3>🏥 Vigencia IMSS</h3>
               <div className="datos-grid">
                 <div className="dato-item">
                   <span className="dato-label">Estatus</span>
                   <span className={`dato-value ${clienteSeleccionado.vigenciaIMSS?.vigente ? 'success' : 'warning'}`}>
-                    {clienteSeleccionado.vigenciaIMSS?.vigente ? 'âœ… Vigente' : 'âš ï¸ No verificado'}
+                    {clienteSeleccionado.vigenciaIMSS?.vigente ? '✅ Vigente' : '⚠️ No verificado'}
                   </span>
                 </div>
                 <div className="dato-item">
@@ -1588,7 +1588,7 @@ function CRM() {
 
             {/* Historial de pagos */}
             <div className="detalle-section full-width">
-              <h3>ðŸ’° Historial de Pagos</h3>
+              <h3>💰 Historial de Pagos</h3>
               {clienteSeleccionado.historialPagos && clienteSeleccionado.historialPagos.length > 0 ? (
                 <div className="pagos-tabla">
                   <table>
@@ -1621,14 +1621,14 @@ function CRM() {
 
             {/* Historial de vigencias */}
             <div className="detalle-section full-width">
-              <h3>ðŸ¥ Historial de Vigencias</h3>
+              <h3>🏥 Historial de Vigencias</h3>
               {clienteSeleccionado.historialVigencias && clienteSeleccionado.historialVigencias.length > 0 ? (
                 <div className="vigencias-lista">
                   {clienteSeleccionado.historialVigencias.map((v, i) => (
                     <div key={i} className="vigencia-item">
                       <span className="vigencia-fecha">{formatFecha(v.fecha)}</span>
                       <span className={`vigencia-estatus ${v.vigente ? 'success' : 'error'}`}>
-                        {v.vigente ? 'âœ… Vigente' : 'âŒ No vigente'}
+                        {v.vigente ? '✅ Vigente' : '❌ No vigente'}
                       </span>
                       <span className="vigencia-hasta">Hasta: {v.fechaVigenciaHasta || 'N/A'}</span>
                       <span className="vigencia-clinica">{v.clinicaAsignada || ''}</span>
@@ -1644,11 +1644,11 @@ function CRM() {
           {/* Acciones */}
           <div className="detalle-acciones">
             <button onClick={() => generarMensajeBienvenida(clienteSeleccionado.id)}>
-              ðŸ“‹ Copiar Mensaje Bienvenida
+              📋 Copiar Mensaje Bienvenida
             </button>
             {clienteSeleccionado.whatsapp && (
               <a href={`https://wa.me/${clienteSeleccionado.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="btn-whatsapp">
-                ðŸ“± Abrir WhatsApp
+                📱 Abrir WhatsApp
               </a>
             )}
           </div>
@@ -1659,19 +1659,19 @@ function CRM() {
       {vista === 'pagos' && (
         <div className="crm-pagos">
           <div className="vista-header">
-            <h2>ðŸ’° Gestion de Pagos</h2>
+            <h2>💰 Gestion de Pagos</h2>
             <button className="btn-primary" onClick={() => setSubVista('nuevo-pago')}>
-              âž• Registrar Pago
+              ➕ Registrar Pago
             </button>
           </div>
 
           {/* Tabs de pagos */}
           <div className="pagos-tabs">
             <button className={!subVista || subVista === 'pendientes-match' ? 'active' : ''} onClick={() => { setSubVista('pendientes-match'); cargarPagosPendientesMatch(); }}>
-              â³ Pendientes Match ({pagos.length})
+              ⏳ Pendientes Match ({pagos.length})
             </button>
             <button className={subVista === 'pendientes-imss' ? 'active' : ''} onClick={() => { setSubVista('pendientes-imss'); cargarPagosPendientesIMSS(); }}>
-              ðŸ›ï¸ Pendientes IMSS ({pagosPendientesIMSS.length})
+              🏛️ Pendientes IMSS ({pagosPendientesIMSS.length})
             </button>
           </div>
 
@@ -1679,8 +1679,8 @@ function CRM() {
           {subVista === 'nuevo-pago' && (
             <div className="crm-section">
               <div className="section-header">
-                <h3>âž• Registrar Pago Recibido</h3>
-                <button className="btn-close" onClick={() => setSubVista(null)}>âœ•</button>
+                <h3>➕ Registrar Pago Recibido</h3>
+                <button className="btn-close" onClick={() => setSubVista(null)}>✕</button>
               </div>
               <form onSubmit={registrarPago} className="pago-form">
                 <div className="form-grid">
@@ -1690,11 +1690,11 @@ function CRM() {
                       value={nuevoPago.metodo}
                       onChange={(e) => setNuevoPago(p => ({ ...p, metodo: e.target.value }))}
                     >
-                      <option value="paypal">ðŸ’³ PayPal</option>
-                      <option value="zelle">ðŸ¦ Zelle</option>
-                      <option value="westernUnion">ðŸ’µ Western Union</option>
-                      <option value="venmo">ðŸ“± Venmo</option>
-                      <option value="transferenciaMX">ðŸ‡²ðŸ‡½ Transferencia MX</option>
+                      <option value="paypal">💳 PayPal</option>
+                      <option value="zelle">🏦 Zelle</option>
+                      <option value="westernUnion">💵 Western Union</option>
+                      <option value="venmo">📱 Venmo</option>
+                      <option value="transferenciaMX">🇲🇽 Transferencia MX</option>
                     </select>
                   </div>
                   <div className="form-group">
@@ -1763,7 +1763,7 @@ function CRM() {
                 <div className="form-actions">
                   <button type="button" onClick={() => setSubVista(null)}>Cancelar</button>
                   <button type="submit" className="btn-primary" disabled={loading}>
-                    {loading ? 'Registrando...' : 'ðŸ’° Registrar Pago'}
+                    {loading ? 'Registrando...' : '💰 Registrar Pago'}
                   </button>
                 </div>
               </form>
@@ -1779,23 +1779,23 @@ function CRM() {
                     <span className="pago-monto">{formatMoney(pago.monto, pago.moneda)}</span>
                     <span className="pago-metodo">{pago.metodo}</span>
                     <span className={`pago-estatus ${pago.estatusProcesamiento}`}>
-                      {pago.estatusProcesamiento === 'matched_pendiente_confirmacion' ? 'ðŸ”— Match pendiente' : 'â³ Sin match'}
+                      {pago.estatusProcesamiento === 'matched_pendiente_confirmacion' ? '🔗 Match pendiente' : '⏳ Sin match'}
                     </span>
                   </div>
                   <div className="pago-body">
                     <div className="pago-info">
-                      <span>ðŸ“… {formatFecha(pago.fecha)}</span>
-                      <span>ðŸ‘¤ {pago.nombreRemitente || 'Sin nombre'}</span>
-                      <span>ðŸ“§ {pago.emailRemitente || 'Sin email'}</span>
+                      <span>📅 {formatFecha(pago.fecha)}</span>
+                      <span>👤 {pago.nombreRemitente || 'Sin nombre'}</span>
+                      <span>📧 {pago.emailRemitente || 'Sin email'}</span>
                     </div>
                     {pago.notaRemitente && (
-                      <div className="pago-nota">ðŸ“ {pago.notaRemitente}</div>
+                      <div className="pago-nota">📝 {pago.notaRemitente}</div>
                     )}
 
                     {pago.matched && pago.candidatosMatch && pago.candidatosMatch[0] && (
                       <div className="pago-match-info">
                         <div className="match-header">
-                          <span className="match-icon">ðŸ”—</span>
+                          <span className="match-icon">🔗</span>
                           <span className="match-confidence">{pago.matchConfidencia}% confianza</span>
                           <span className="match-tipo">({pago.matchedPor})</span>
                         </div>
@@ -1832,7 +1832,7 @@ function CRM() {
                   <div className="pago-actions">
                     {pago.estatusProcesamiento === 'matched_pendiente_confirmacion' && (
                       <button className="btn-success" onClick={() => confirmarPago(pago.id)}>
-                        âœ… Confirmar Match
+                        ✅ Confirmar Match
                       </button>
                     )}
                   </div>
@@ -1852,12 +1852,12 @@ function CRM() {
                   <div className="pago-header">
                     <span className="pago-monto">{formatMoney(pago.monto, pago.moneda)}</span>
                     <span className="pago-metodo">{pago.metodo}</span>
-                    <span className="pago-estatus warning">ðŸ›ï¸ Pendiente IMSS</span>
+                    <span className="pago-estatus warning">🏛️ Pendiente IMSS</span>
                   </div>
                   <div className="pago-body">
                     <div className="pago-info">
-                      <span>ðŸ“… Recibido: {formatFecha(pago.fecha)}</span>
-                      <span>âœ… Confirmado: {formatFecha(pago.fechaConfirmacion)}</span>
+                      <span>📅 Recibido: {formatFecha(pago.fecha)}</span>
+                      <span>✅ Confirmado: {formatFecha(pago.fechaConfirmacion)}</span>
                     </div>
                     {pago.candidatosMatch && pago.candidatosMatch[0] && (
                       <div className="cliente-info">
@@ -1868,7 +1868,7 @@ function CRM() {
                   </div>
                   <div className="pago-actions">
                     <button className="btn-primary" onClick={() => setPagoSeleccionado(pago)}>
-                      ðŸ›ï¸ Registrar Pago IMSS
+                      🏛️ Registrar Pago IMSS
                     </button>
                   </div>
                 </div>
@@ -1883,7 +1883,7 @@ function CRM() {
           {pagoSeleccionado && (
             <div className="modal-overlay" onClick={() => setPagoSeleccionado(null)}>
               <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <h3>ðŸ›ï¸ Registrar Pago al IMSS</h3>
+                <h3>🏛️ Registrar Pago al IMSS</h3>
                 <p className="modal-subtitle">Pago recibido: {formatMoney(pagoSeleccionado.monto, pagoSeleccionado.moneda)}</p>
 
                 <div className="form-grid">
@@ -1932,7 +1932,7 @@ function CRM() {
                 <div className="modal-actions">
                   <button onClick={() => setPagoSeleccionado(null)}>Cancelar</button>
                   <button className="btn-primary" onClick={() => marcarPagadoIMSS(pagoSeleccionado.id)} disabled={loading}>
-                    {loading ? 'Registrando...' : 'âœ… Confirmar Pago IMSS'}
+                    {loading ? 'Registrando...' : '✅ Confirmar Pago IMSS'}
                   </button>
                 </div>
               </div>
@@ -1945,7 +1945,7 @@ function CRM() {
       {vista === 'historial' && (
         <div className="crm-historial">
           <div className="vista-header">
-            <h2>ðŸ“œ Historial de Pagos</h2>
+            <h2>📜 Historial de Pagos</h2>
           </div>
 
           {/* Filtros */}
@@ -2024,19 +2024,19 @@ function CRM() {
       {vista === 'notificaciones' && !subVista && (
         <div className="crm-notificaciones">
           <div className="vista-header">
-            <h2>ðŸ“± Notificaciones y Recordatorios</h2>
+            <h2>📱 Notificaciones y Recordatorios</h2>
             <button
               className="btn-primary"
               onClick={() => { setAgenteAEditar(null); setSubVista('crear-agente'); }}
               style={{ backgroundColor: '#2563eb' }}
             >
-              ðŸ¤–ðŸ’¼ Crear Agente de Voz
+              🤖💼 Crear Agente de Voz
             </button>
           </div>
 
           {/* Agentes de Voz (IA) */}
           <div className="notif-section">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>ðŸ¤– Agentes de Voz Activos ({agentesVoz.length})</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>🤖 Agentes de Voz Activos ({agentesVoz.length})</h3>
             <div className="clientes-pendientes-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
               {agentesVoz.map(agente => (
                 <div key={agente.id} className="cliente-pendiente-card bg-slate-800 border !border-slate-700">
@@ -2082,24 +2082,24 @@ function CRM() {
 
           {/* Recordatorios de pago */}
           <div className="notif-section">
-            <h3>â° Recordatorios de Pago ({recordatorios.length})</h3>
+            <h3>⏰ Recordatorios de Pago ({recordatorios.length})</h3>
             <div className="recordatorios-grid">
               {recordatorios.map((r, i) => (
                 <div key={i} className={`recordatorio-card ${r.prioridad}`}>
                   <div className="recordatorio-header">
                     <span className="recordatorio-nombre">{r.nombreCliente}</span>
                     <span className={`prioridad-badge ${r.prioridad}`}>
-                      {r.prioridad === 'urgente' && 'ðŸ”´ Urgente'}
-                      {r.prioridad === 'alta' && 'ðŸŸ  Alta'}
-                      {r.prioridad === 'normal' && 'ðŸŸ¢ Normal'}
+                      {r.prioridad === 'urgente' && '🔴 Urgente'}
+                      {r.prioridad === 'alta' && '🟠 Alta'}
+                      {r.prioridad === 'normal' && '🟢 Normal'}
                     </span>
                   </div>
                   <div className="recordatorio-info">
-                    <span>ðŸ“± {r.whatsapp}</span>
+                    <span>📱 {r.whatsapp}</span>
                     <span className={r.diasRestantes < 0 ? 'vencido' : ''}>
                       {r.diasRestantes < 0
-                        ? `âš ï¸ Vencido hace ${Math.abs(r.diasRestantes)} dias`
-                        : `ðŸ“… Faltan ${r.diasRestantes} dias`}
+                        ? `⚠️ Vencido hace ${Math.abs(r.diasRestantes)} dias`
+                        : `📅 Faltan ${r.diasRestantes} dias`}
                     </span>
                   </div>
                   <div className="recordatorio-mensaje">
@@ -2107,7 +2107,7 @@ function CRM() {
                   </div>
                   <div className="recordatorio-actions">
                     <button onClick={() => { navigator.clipboard.writeText(r.mensaje); mostrarMensaje('Mensaje copiado', 'success'); }}>
-                      ðŸ“‹ Copiar
+                      📋 Copiar
                     </button>
                     <a
                       href={`https://wa.me/${r.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(r.mensaje)}`}
@@ -2115,7 +2115,7 @@ function CRM() {
                       rel="noopener noreferrer"
                       className="btn-whatsapp"
                     >
-                      ðŸ“± Enviar WhatsApp
+                      📱 Enviar WhatsApp
                     </a>
                   </div>
                 </div>
@@ -2128,7 +2128,7 @@ function CRM() {
 
           {/* Clientes con pago pendiente */}
           <div className="notif-section">
-            <h3>ðŸ’° Clientes con Pago Pendiente ({clientesPagoPendiente.length})</h3>
+            <h3>💰 Clientes con Pago Pendiente ({clientesPagoPendiente.length})</h3>
             <div className="clientes-pendientes-grid">
               {clientesPagoPendiente.map(c => (
                 <div key={c.id} className="cliente-pendiente-card">
@@ -2137,8 +2137,8 @@ function CRM() {
                     <span className="cliente-monto">{formatMoney(c.totalMensual)}</span>
                   </div>
                   <div className="cliente-meta">
-                    <span>ðŸ“… Corte: {formatFecha(c.proximoCorte)}</span>
-                    <span>ðŸ“± {c.whatsapp}</span>
+                    <span>📅 Corte: {formatFecha(c.proximoCorte)}</span>
+                    <span>📱 {c.whatsapp}</span>
                   </div>
                   <div className="cliente-actions">
                     <a
@@ -2147,7 +2147,7 @@ function CRM() {
                       rel="noopener noreferrer"
                       className="btn-whatsapp small"
                     >
-                      ðŸ“± WhatsApp
+                      📱 WhatsApp
                     </a>
                   </div>
                 </div>
@@ -2164,17 +2164,17 @@ function CRM() {
       {vista === 'llamadas' && (
         <div className="crm-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2>ðŸ“ž Historial de Llamadas</h2>
+            <h2>📞 Historial de Llamadas</h2>
             <button onClick={cargarLlamadas} style={{ padding: '8px 16px', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', cursor: 'pointer' }}>
-              ðŸ”„ Actualizar
+              🔄 Actualizar
             </button>
           </div>
 
           {llamadas.length === 0 && !loading && (
             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-              <p style={{ fontSize: '48px' }}>ðŸ“ž</p>
-              <p>No hay llamadas registradas aÃºn.</p>
-              <p style={{ fontSize: '14px' }}>Las llamadas aparecerÃ¡n aquÃ­ cuando alguien llame al nÃºmero de Twilio.</p>
+              <p style={{ fontSize: '48px' }}>📞</p>
+              <p>No hay llamadas registradas aún.</p>
+              <p style={{ fontSize: '14px' }}>Las llamadas aparecerán aquí cuando alguien llame al número de Twilio.</p>
             </div>
           )}
 
@@ -2193,7 +2193,7 @@ function CRM() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '20px' }}>
-                        {llamada.direction === 'inbound' ? 'ðŸ“¥' : 'ðŸ“¤'}
+                        {llamada.direction === 'inbound' ? '📥' : '📤'}
                       </span>
                       <div>
                         <div style={{ fontWeight: 'bold', color: '#e2e8f0' }}>
@@ -2201,7 +2201,7 @@ function CRM() {
                         </div>
                         <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                           {llamada.direction === 'inbound' ? 'Llamada entrante' : 'Llamada saliente'}
-                          {llamada.agent_id ? ` â€¢ Agente: ${llamada.agent_id}` : ''}
+                          {llamada.agent_id ? ` • Agente: ${llamada.agent_id}` : ''}
                         </div>
                       </div>
                     </div>
@@ -2221,7 +2221,7 @@ function CRM() {
                       </div>
                       {llamada.duration && (
                         <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                          â±ï¸ {llamada.duration}s
+                          ⏱️ {llamada.duration}s
                         </div>
                       )}
                     </div>
@@ -2242,7 +2242,7 @@ function CRM() {
                       borderLeft: '3px solid #3b82f6'
                     }}>
                       <h4 style={{ color: '#60a5fa', marginBottom: '12px', fontSize: '14px' }}>
-                        ðŸ“ TranscripciÃ³n de la ConversaciÃ³n
+                        📝 Transcripción de la Conversación
                       </h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {llamada.transcript.split('\n').filter(l => l.trim()).map((linea, i) => {
@@ -2265,7 +2265,7 @@ function CRM() {
                                 background: esUser ? '#1e40af' : esAI ? '#065f46' : '#374151',
                                 color: '#e2e8f0'
                               }}>
-                                {esUser ? 'ðŸ‘¤ User' : esAI ? 'ðŸ¤– IA' : 'ðŸ“Œ'}
+                                {esUser ? '👤 User' : esAI ? '🤖 IA' : '📌'}
                               </span>
                               <span style={{ color: '#cbd5e1', lineHeight: '1.5', fontSize: '14px' }}>
                                 {texto}
@@ -2279,7 +2279,7 @@ function CRM() {
 
                   {llamadaSeleccionada?.call_sid === llamada.call_sid && !llamada.transcript && (
                     <div style={{ marginTop: '12px', color: '#64748b', fontStyle: 'italic', fontSize: '13px' }}>
-                      Sin transcripciÃ³n disponible para esta llamada.
+                      Sin transcripción disponible para esta llamada.
                     </div>
                   )}
                 </div>
@@ -2289,102 +2289,79 @@ function CRM() {
         </div>
       )}
 
-      {/* ==================== CONVERSACIONES WHATSAPP (Estilo WhatsApp Web) ==================== */}
+      {/* ==================== CONVERSACIONES WHATSAPP ==================== */}
       {vista === 'whatsapp' && (
         <div style={{ display: 'flex', height: 'calc(100vh - 60px)', background: '#111b21', overflow: 'hidden' }}>
           {/* Panel izquierdo: Lista de chats */}
           <div style={{ width: '350px', minWidth: '350px', borderRight: '1px solid #2a3942', display: 'flex', flexDirection: 'column', background: '#111b21' }}>
-            <div style={{ padding: '12px 16px', background: '#202c33', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#e9edef' }}>Chats</span>
-              <button onClick={cargarSesionesWA} style={{ padding: '6px 12px', borderRadius: '6px', background: '#00a884', color: 'white', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
-                Actualizar
-              </button>
+            <div style={{ padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2a3942' }}>
+              <h3 style={{ color: '#e9edef', margin: 0, fontSize: '16px' }}>WhatsApp</h3>
+              <button onClick={cargarSesionesWA} style={{ padding: '6px 14px', borderRadius: '6px', background: '#25d366', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Actualizar</button>
             </div>
-            <div style={{ padding: '8px 12px' }}>
-              <input type="text" placeholder="Buscar o iniciar chat..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#202c33', border: 'none', color: '#e9edef', fontSize: '14px', outline: 'none' }} />
+            <div style={{ padding: '8px' }}>
+              <input type="text" placeholder="Buscar chat..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: '#202c33', color: '#e9edef', fontSize: '14px', outline: 'none' }} />
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {sesionesWA.length === 0 && !loading && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8696a0', fontSize: '14px' }}>No hay conversaciones activas</div>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#8696a0' }}>No hay conversaciones activas</div>
               )}
-              {sesionesWA.map((sesion, idx) => {
-                const ultimoMsg = sesion.historial?.[sesion.historial.length - 1]
-                const isSel = sesionWASeleccionada?.telefono === sesion.telefono
-                return (
-                  <div key={sesion.telefono || idx} onClick={() => setSesionWASeleccionada(sesion)} style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer',
-                    background: isSel ? '#2a3942' : 'transparent', borderBottom: '1px solid #2a3942'
+              {sesionesWA.map((sesion, idx) => (
+                <div key={idx} onClick={() => setSesionWASeleccionada(sesion)}
+                  style={{
+                    display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #222d34',
+                    background: sesionWASeleccionada?.telefono === sesion.telefono ? '#2a3942' : 'transparent'
                   }}>
-                    <div style={{ width: '49px', height: '49px', borderRadius: '50%', background: '#00a884', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0, color: '#111b21' }}>
-                      {(sesion.nombreContacto || '?')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span style={{ color: '#e9edef', fontWeight: '500', fontSize: '15px' }}>{sesion.nombreContacto || `+${sesion.telefono}`}</span>
-                        <span style={{ color: '#8696a0', fontSize: '12px', flexShrink: 0 }}>
-                          {sesion.ultimaActividad ? new Date(sesion.ultimaActividad).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </span>
-                      </div>
-                      <div style={{ color: '#8696a0', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {ultimoMsg ? `${ultimoMsg.rol === 'asistente' ? '\u2713\u2713 ' : ''}${(ultimoMsg.mensaje || '').substring(0, 45)}` : 'Sin mensajes'}
-                      </div>
-                    </div>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '18px', marginRight: '12px', flexShrink: 0 }}>
+                    {(sesion.telefono || '?').slice(-2)}
                   </div>
-                )
-              })}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#e9edef', fontWeight: 500, fontSize: '15px' }}>{sesion.telefono || 'Desconocido'}</span>
+                      <span style={{ color: '#8696a0', fontSize: '11px' }}>{sesion.ultimaActividad ? new Date(sesion.ultimaActividad).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    </div>
+                    <p style={{ color: '#8696a0', fontSize: '13px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {sesion.historial?.length > 0 ? sesion.historial[sesion.historial.length - 1].texto?.substring(0, 40) : 'Sin mensajes'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Panel derecho: Chat */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0b141a' }}>
             {!sesionWASeleccionada ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#222e35', color: '#8696a0' }}>
-                <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.5 }}>{'\ud83d\udcac'}</div>
-                <h3 style={{ color: '#e9edef', fontWeight: '300', fontSize: '28px', marginBottom: '10px' }}>WhatsApp CRM</h3>
-                <p style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px', lineHeight: '1.6' }}>
-                  Selecciona una conversaci&oacute;n para ver los mensajes.
-                </p>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8696a0' }}>
+                <div style={{ fontSize: '64px', marginBottom: '20px' }}>{'\ud83d\udcac'}</div>
+                <h2 style={{ color: '#e9edef', fontWeight: 300, marginBottom: '8px' }}>WhatsApp CRM</h2>
+                <p>Selecciona una conversaci{'\u00f3'}n para ver los mensajes.</p>
               </div>
             ) : (
               <>
-                {/* Chat header */}
-                <div style={{ padding: '10px 16px', background: '#202c33', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #2a3942' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#00a884', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#111b21', fontWeight: 'bold' }}>
-                    {(sesionWASeleccionada.nombreContacto || '?')[0].toUpperCase()}
+                <div style={{ padding: '12px 16px', background: '#202c33', borderBottom: '1px solid #2a3942', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#25d366', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                    {(sesionWASeleccionada.telefono || '?').slice(-2)}
                   </div>
                   <div>
-                    <div style={{ color: '#e9edef', fontWeight: '500', fontSize: '16px' }}>{sesionWASeleccionada.nombreContacto || `+${sesionWASeleccionada.telefono}`}</div>
-                    <div style={{ color: '#8696a0', fontSize: '13px' }}>+{sesionWASeleccionada.telefono}</div>
+                    <div style={{ color: '#e9edef', fontWeight: 500 }}>{sesionWASeleccionada.telefono}</div>
+                    <div style={{ color: '#8696a0', fontSize: '12px' }}>Paso: {sesionWASeleccionada.paso || 'inicio'}</div>
                   </div>
                 </div>
-
-                {/* Mensajes */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 60px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {(!sesionWASeleccionada.historial || sesionWASeleccionada.historial.length === 0) && (
-                    <div style={{ textAlign: 'center', color: '#8696a0', padding: '20px', background: '#1d2b36', borderRadius: '8px', margin: '0 auto', fontSize: '13px' }}>
-                      Los mensajes de esta conversaci&oacute;n aparecer&aacute;n aqu&iacute;.
-                    </div>
-                  )}
-                  {sesionWASeleccionada.historial?.map((msg, i) => {
-                    const esUsuario = msg.rol === 'usuario'
-                    return (
-                      <div key={i} style={{ display: 'flex', justifyContent: esUsuario ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
-                        <div style={{
-                          maxWidth: '65%', padding: '6px 8px 8px 9px',
-                          borderRadius: esUsuario ? '0 8px 8px 8px' : '8px 0 8px 8px',
-                          background: esUsuario ? '#202c33' : '#005c4b',
-                          color: '#e9edef', fontSize: '14.2px', lineHeight: '1.4',
-                          boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)'
-                        }}>
-                          <span>{msg.mensaje}</span>
-                          <span style={{ float: 'right', fontSize: '11px', color: esUsuario ? '#8696a0' : '#7cc8b5', marginLeft: '10px', marginTop: '3px' }}>
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
-                            {!esUsuario && ' \u2713\u2713'}
-                          </span>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(sesionWASeleccionada.historial || []).map((msg, i) => (
+                    <div key={i} style={{ alignSelf: msg.rol === 'usuario' ? 'flex-start' : 'flex-end', maxWidth: '65%' }}>
+                      <div style={{ padding: '8px 12px', borderRadius: '8px', background: msg.rol === 'usuario' ? '#202c33' : '#005c4b', color: '#e9edef', fontSize: '14px', lineHeight: '1.4' }}>
+                        {msg.texto}
+                        <div style={{ fontSize: '11px', color: '#8696a0', textAlign: 'right', marginTop: '4px' }}>
+                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {msg.rol === 'asistente' && ' \u2713\u2713'}
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
+                  {(!sesionWASeleccionada.historial || sesionWASeleccionada.historial.length === 0) && (
+                    <div style={{ textAlign: 'center', color: '#8696a0', padding: '40px' }}>Sin mensajes registrados</div>
+                  )}
                 </div>
               </>
             )}
@@ -2392,111 +2369,88 @@ function CRM() {
         </div>
       )}
 
-      {/* ==================== CONVERSACIONES TELEGRAM (Estilo Telegram) ==================== */}
+      {/* ==================== CONVERSACIONES TELEGRAM ==================== */}
       {vista === 'telegram' && (
         <div style={{ display: 'flex', height: 'calc(100vh - 60px)', background: '#17212b', overflow: 'hidden' }}>
           {/* Panel izquierdo: Lista de chats */}
           <div style={{ width: '350px', minWidth: '350px', borderRight: '1px solid #242f3d', display: 'flex', flexDirection: 'column', background: '#17212b' }}>
-            <div style={{ padding: '12px 16px', background: '#242f3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#e1e3e6' }}>Telegram</span>
-              <button onClick={cargarSesionesTG} style={{ padding: '6px 12px', borderRadius: '6px', background: '#2AABEE', color: 'white', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
-                Actualizar
-              </button>
+            <div style={{ padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #242f3d' }}>
+              <h3 style={{ color: '#e1e3e6', margin: 0, fontSize: '16px' }}>Telegram</h3>
+              <button onClick={cargarSesionesTG} style={{ padding: '6px 14px', borderRadius: '6px', background: '#2AABEE', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Actualizar</button>
             </div>
-            <div style={{ padding: '8px 12px' }}>
-              <input type="text" placeholder="Buscar chat..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#242f3d', border: 'none', color: '#e1e3e6', fontSize: '14px', outline: 'none' }} />
+            <div style={{ padding: '8px' }}>
+              <input type="text" placeholder="Buscar chat..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: 'none', background: '#242f3d', color: '#e1e3e6', fontSize: '14px', outline: 'none' }} />
             </div>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {sesionesTG.length === 0 && !loading && (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6d7f8f', fontSize: '14px' }}>No hay conversaciones activas</div>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6c7883' }}>No hay conversaciones activas</div>
               )}
-              {sesionesTG.map((sesion, idx) => {
-                const ultimoMsg = sesion.historial?.[sesion.historial.length - 1]
-                const isSel = sesionTGSeleccionada?.chatId === sesion.chatId
-                return (
-                  <div key={sesion.chatId || idx} onClick={() => setSesionTGSeleccionada(sesion)} style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer',
-                    background: isSel ? '#2b5278' : 'transparent', borderBottom: '1px solid #242f3d'
+              {sesionesTG.map((sesion, idx) => (
+                <div key={idx} onClick={() => setSesionTGSeleccionada(sesion)}
+                  style={{
+                    display: 'flex', alignItems: 'center', padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #242f3d',
+                    background: sesionTGSeleccionada?.chatId === sesion.chatId ? '#2b5278' : 'transparent'
                   }}>
-                    <div style={{ width: '49px', height: '49px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0, color: 'white', fontWeight: 'bold' }}>
-                      {(sesion.nombre || '?')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                        <span style={{ color: '#e1e3e6', fontWeight: '500', fontSize: '15px' }}>{sesion.nombre || `Chat ${sesion.chatId}`}</span>
-                        <span style={{ color: '#6d7f8f', fontSize: '12px', flexShrink: 0 }}>
-                          {sesion.ultimaActividad ? new Date(sesion.ultimaActividad).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
-                        </span>
-                      </div>
-                      <div style={{ color: '#6d7f8f', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {ultimoMsg ? `${ultimoMsg.rol === 'asistente' ? '\u2713 ' : ''}${(ultimoMsg.mensaje || '').substring(0, 45)}` : 'Sin mensajes'}
-                      </div>
-                    </div>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '16px', marginRight: '12px', flexShrink: 0 }}>
+                    {String(sesion.chatId || '?').slice(-2)}
                   </div>
-                )
-              })}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: '#e1e3e6', fontWeight: 500, fontSize: '15px' }}>Chat {sesion.chatId || 'Desconocido'}</span>
+                      <span style={{ color: '#6c7883', fontSize: '11px' }}>{sesion.ultimaActividad ? new Date(sesion.ultimaActividad).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    </div>
+                    <p style={{ color: '#6c7883', fontSize: '13px', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {sesion.historial?.length > 0 ? sesion.historial[sesion.historial.length - 1].texto?.substring(0, 40) : 'Sin mensajes'}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Panel derecho: Chat */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0e1621' }}>
             {!sesionTGSeleccionada ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0e1621', color: '#6d7f8f' }}>
-                <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.5 }}>{'\u2708\ufe0f'}</div>
-                <h3 style={{ color: '#e1e3e6', fontWeight: '300', fontSize: '28px', marginBottom: '10px' }}>Telegram CRM</h3>
-                <p style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px', lineHeight: '1.6' }}>
-                  Selecciona una conversaci&oacute;n para ver los mensajes.
-                </p>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#6c7883' }}>
+                <div style={{ fontSize: '64px', marginBottom: '20px' }}>{'\u2708\ufe0f'}</div>
+                <h2 style={{ color: '#e1e3e6', fontWeight: 300, marginBottom: '8px' }}>Telegram CRM</h2>
+                <p>Selecciona una conversaci{'\u00f3'}n para ver los mensajes.</p>
               </div>
             ) : (
               <>
-                {/* Chat header */}
-                <div style={{ padding: '10px 16px', background: '#242f3d', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #242f3d' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: 'white', fontWeight: 'bold' }}>
-                    {(sesionTGSeleccionada.nombre || '?')[0].toUpperCase()}
+                <div style={{ padding: '12px 16px', background: '#17212b', borderBottom: '1px solid #242f3d', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
+                    {String(sesionTGSeleccionada.chatId || '?').slice(-2)}
                   </div>
                   <div>
-                    <div style={{ color: '#e1e3e6', fontWeight: '500', fontSize: '16px' }}>{sesionTGSeleccionada.nombre || `Chat ${sesionTGSeleccionada.chatId}`}</div>
-                    <div style={{ color: '#6d7f8f', fontSize: '13px' }}>ID: {sesionTGSeleccionada.chatId}</div>
+                    <div style={{ color: '#e1e3e6', fontWeight: 500 }}>Chat {sesionTGSeleccionada.chatId}</div>
+                    <div style={{ color: '#6c7883', fontSize: '12px' }}>Paso: {sesionTGSeleccionada.paso || 'inicio'}</div>
                   </div>
                 </div>
-
-                {/* Mensajes */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 60px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  {(!sesionTGSeleccionada.historial || sesionTGSeleccionada.historial.length === 0) && (
-                    <div style={{ textAlign: 'center', color: '#6d7f8f', padding: '20px', background: '#1d2733', borderRadius: '8px', margin: '0 auto', fontSize: '13px' }}>
-                      Los mensajes de esta conversaci&oacute;n aparecer&aacute;n aqu&iacute;.
-                    </div>
-                  )}
-                  {sesionTGSeleccionada.historial?.map((msg, i) => {
-                    const esUsuario = msg.rol === 'usuario'
-                    return (
-                      <div key={i} style={{ display: 'flex', justifyContent: esUsuario ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
-                        <div style={{
-                          maxWidth: '65%', padding: '6px 8px 8px 9px',
-                          borderRadius: esUsuario ? '0 8px 8px 8px' : '8px 0 8px 8px',
-                          background: esUsuario ? '#182533' : '#2b5278',
-                          color: '#e1e3e6', fontSize: '14.2px', lineHeight: '1.4',
-                          boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)'
-                        }}>
-                          <span>{msg.mensaje}</span>
-                          <span style={{ float: 'right', fontSize: '11px', color: '#6d7f8f', marginLeft: '10px', marginTop: '3px' }}>
-                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
-                            {!esUsuario && ' \u2713'}
-                          </span>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(sesionTGSeleccionada.historial || []).map((msg, i) => (
+                    <div key={i} style={{ alignSelf: msg.rol === 'usuario' ? 'flex-start' : 'flex-end', maxWidth: '65%' }}>
+                      <div style={{ padding: '8px 12px', borderRadius: '8px', background: msg.rol === 'usuario' ? '#182533' : '#2b5278', color: '#e1e3e6', fontSize: '14px', lineHeight: '1.4' }}>
+                        {msg.texto}
+                        <div style={{ fontSize: '11px', color: '#6c7883', textAlign: 'right', marginTop: '4px' }}>
+                          {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {msg.rol === 'asistente' && ' \u2713'}
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
+                  {(!sesionTGSeleccionada.historial || sesionTGSeleccionada.historial.length === 0) && (
+                    <div style={{ textAlign: 'center', color: '#6c7883', padding: '40px' }}>Sin mensajes registrados</div>
+                  )}
                 </div>
               </>
             )}
           </div>
         </div>
       )}
+
     </div>
   )
 }
 
 export default CRM
-
