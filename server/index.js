@@ -569,7 +569,7 @@ async function initChannels() {
     canalesActivos.whatsapp = false;
   }
 
-  // Cargar Telegram (con delay para evitar conflicto con instancia anterior)
+  // Cargar Telegram (con delay LARGO para evitar conflicto con instancia anterior en Railway)
   setTimeout(async () => {
     try {
       telegram = await import('./channels/telegram.js');
@@ -583,8 +583,34 @@ async function initChannels() {
       console.log('⚠ Telegram no disponible:', e.message);
       canalesActivos.telegram = false;
     }
-  }, 2000);
+  }, 10000); // 10 segundos — Railway necesita tiempo para cerrar la instancia anterior
 }
+
+// Manejo de señales para cierre limpio (evita que Railway mate el proceso)
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM recibido — cerrando servidor limpiamente...');
+  server.close(() => {
+    console.log('✅ Servidor cerrado.');
+    process.exit(0);
+  });
+  // Forzar cierre después de 5s si no se cierra solo
+  setTimeout(() => process.exit(0), 5000);
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT recibido — cerrando...');
+  process.exit(0);
+});
+
+// Evitar que errores no manejados maten el proceso
+process.on('uncaughtException', (err) => {
+  console.error('💥 Error no manejado (servidor sigue corriendo):', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('💥 Promesa rechazada no manejada:', reason);
+});
+
 // Inicializar canales al arrancar (en segundo plano)
 setImmediate(() => {
   initChannels().then(() => {
