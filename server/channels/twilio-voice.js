@@ -186,26 +186,26 @@ function detectarCalculoMod10(respuestaIA) {
 
 function formatearResultadoMod10(resultado) {
   const r = resultado;
-  const totalMensual = r.periodos?.mensual?.totalConInfonavit || r.periodos?.mensual?.total || r.totalMensual || 0;
-  const cuotaFija = r.desglose?.cuotaFija || 0;
-  const riesgo = r.desglose?.riesgoTrabajo || 0;
-  const retiro = r.desglose?.retiro || 0;
-  const cesantia = (r.desglose?.cesantiaPatron || 0) + (r.desglose?.cesantiaObrero || 0);
+  const totalMensual = r.totalesMensuales?.total || r.totalesMensuales?.imss || 0;
+  const cuotaFija = r.desglose?.cuotaFija?.monto || 0;
+  const riesgo = r.desglose?.riesgoTrabajo?.monto || 0;
+  const retiro = r.desglose?.retiro?.monto || 0;
+  const cesantia = (r.desglose?.cesantiaPatron?.monto || 0) + (r.desglose?.cesantiaObrero?.monto || 0);
+  const infonavit = r.totalesMensuales?.infonavit || 0;
 
   let texto = `RESULTADO DEL CALCULO MODALIDAD 10:\n`;
   texto += `- Cuota mensual total: $${totalMensual.toFixed(2)} pesos\n`;
-  texto += `- Incluye: cuota fija $${cuotaFija.toFixed(2)}, riesgo de trabajo $${riesgo.toFixed(2)}, `;
+  texto += `- Desglose: cuota fija $${cuotaFija.toFixed(2)}, riesgo de trabajo $${riesgo.toFixed(2)}, `;
   texto += `retiro $${retiro.toFixed(2)}, cesantia y vejez $${cesantia.toFixed(2)}\n`;
+  texto += `- Salario declarado: $${r.datos?.salarioMensual || 0} mensuales\n`;
+  texto += `- Zona: ${r.datos?.zona || 'centro'}\n`;
 
   if (r.periodos?.bimestral) {
-    texto += `- Pago bimestral: $${(r.periodos.bimestral.totalConInfonavit || r.periodos.bimestral.total || 0).toFixed(2)}\n`;
-  }
-  if (r.periodos?.anual) {
-    texto += `- Pago anual: $${(r.periodos.anual.totalConInfonavit || r.periodos.anual.total || 0).toFixed(2)}\n`;
+    texto += `- Pago bimestral: $${(r.periodos.bimestral.total || 0).toFixed(2)}\n`;
   }
 
   texto += `\nExplica estos resultados al usuario de forma clara y amigable por telefono. `;
-  texto += `Menciona el total mensual primero, luego los desgloses principales. `;
+  texto += `Menciona el total mensual primero. `;
   texto += `Usa lenguaje natural, di los montos en palabras (ejemplo: dos mil ochocientos cuarenta y siete pesos con cincuenta centavos). `;
   texto += `Maximo 3-4 oraciones.`;
 
