@@ -290,8 +290,31 @@ export async function handleVoiceRespond(req, res) {
     const agentes = agentesVoz.obtenerAgentes();
     const agente = agentes.find(a => a.id === agentId) || agentes[0];
     const voz = sanitizeVoz(agente?.voz || 'Polly.Mia');
-    const systemPrompt = agente?.prompt_sistema || agente?.instrucciones || '';
+    const basePrompt = agente?.prompt_sistema || agente?.instrucciones || '';
     const greeting = agente?.greeting_message || agente?.saludo || `Hola, soy ${agente?.nombre}.`;
+
+    // SIEMPRE inyectar instrucciones de calculadora al prompt del agente
+    const INSTRUCCIONES_CALCULADORA = `
+
+HERRAMIENTA DE CÁLCULO - MODALIDAD 10:
+Tienes acceso a una calculadora real de Modalidad 10. NUNCA intentes calcular tú mismo las cuotas.
+Cuando el usuario pregunte cuánto cuesta o paga por Modalidad 10, sigue estos pasos:
+1. Pregunta: "¿Cuál es tu ingreso mensual?" (obtener el monto en pesos)
+2. Pregunta: "¿Vives en zona fronteriza o en el resto del país?" (obtener zona)
+3. Cuando tengas al menos el salario, responde ÚNICAMENTE con este formato exacto, sin ningún otro texto:
+   [CALCULAR_MOD10]{"salarioMensual": NUMERO, "zona": "centro"}
+
+REGLAS ESTRICTAS:
+- El NUMERO debe ser solo dígitos (ejemplo: 20000, no "20,000" ni "20 mil")
+- zona debe ser "centro" (resto del país) o "fronteriza" (franja fronteriza del norte)
+- Si el usuario dice "15 mil" o "quince mil", convierte a 15000
+- Si el usuario dice "20 mil" o "veinte mil", convierte a 20000
+- NUNCA inventes un monto. Si no entendiste el salario, pregunta de nuevo.
+- NUNCA calcules las cuotas tú mismo. SOLO usa el tag [CALCULAR_MOD10].
+- Cuando emitas el tag, NO agregues ningún texto antes ni después del tag.
+`;
+
+    const systemPrompt = basePrompt + INSTRUCCIONES_CALCULADORA;
 
     // Recuperar historial de transcript
     const transcript = callsDb.obtenerTranscript(callSid);
