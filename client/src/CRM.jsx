@@ -23,6 +23,8 @@ function CRM() {
   const [llamadaSeleccionada, setLlamadaSeleccionada] = useState(null) // Selected call for transcript view
   const [sesionesWA, setSesionesWA] = useState([]) // WhatsApp sessions
   const [sesionWASeleccionada, setSesionWASeleccionada] = useState(null)
+  const [sesionesTG, setSesionesTG] = useState([]) // Telegram sessions
+  const [sesionTGSeleccionada, setSesionTGSeleccionada] = useState(null)
 
   // Selected items
   const [prospectoSeleccionado, setProspectoSeleccionado] = useState(null)
@@ -310,6 +312,23 @@ function CRM() {
     } catch (err) {
       console.error('Error cargando sesiones WA:', err)
       setSesionesWA([])
+    }
+    setLoading(false)
+  }
+
+  const cargarSesionesTG = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/telegram/sesiones')
+      const data = await res.json()
+      if (data.success) {
+        setSesionesTG(data.data || [])
+      } else {
+        setSesionesTG([])
+      }
+    } catch (err) {
+      console.error('Error cargando sesiones TG:', err)
+      setSesionesTG([])
     }
     setLoading(false)
   }
@@ -602,6 +621,9 @@ function CRM() {
       case 'whatsapp':
         cargarSesionesWA()
         break
+      case 'telegram':
+        cargarSesionesTG()
+        break
     }
   }
 
@@ -664,7 +686,10 @@ function CRM() {
           ðŸ“ž Llamadas
         </button>
         <button className={vista === 'whatsapp' ? 'active' : ''} onClick={() => cambiarVista('whatsapp')}>
-          ðŸ’¬ WhatsApp
+          💬 WhatsApp
+        </button>
+        <button className={vista === 'telegram' ? 'active' : ''} onClick={() => cambiarVista('telegram')}>
+          ✈️ Telegram
         </button>
 
         <div className="crm-nav-phone" style={{ marginTop: 'auto', padding: '10px' }}>
@@ -2355,6 +2380,109 @@ function CRM() {
                           <span style={{ float: 'right', fontSize: '11px', color: esUsuario ? '#8696a0' : '#7cc8b5', marginLeft: '10px', marginTop: '3px' }}>
                             {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
                             {!esUsuario && ' \u2713\u2713'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== CONVERSACIONES TELEGRAM (Estilo Telegram) ==================== */}
+      {vista === 'telegram' && (
+        <div style={{ display: 'flex', height: 'calc(100vh - 60px)', background: '#17212b', overflow: 'hidden' }}>
+          {/* Panel izquierdo: Lista de chats */}
+          <div style={{ width: '350px', minWidth: '350px', borderRight: '1px solid #242f3d', display: 'flex', flexDirection: 'column', background: '#17212b' }}>
+            <div style={{ padding: '12px 16px', background: '#242f3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#e1e3e6' }}>Telegram</span>
+              <button onClick={cargarSesionesTG} style={{ padding: '6px 12px', borderRadius: '6px', background: '#2AABEE', color: 'white', border: 'none', cursor: 'pointer', fontSize: '12px' }}>
+                Actualizar
+              </button>
+            </div>
+            <div style={{ padding: '8px 12px' }}>
+              <input type="text" placeholder="Buscar chat..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', background: '#242f3d', border: 'none', color: '#e1e3e6', fontSize: '14px', outline: 'none' }} />
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {sesionesTG.length === 0 && !loading && (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6d7f8f', fontSize: '14px' }}>No hay conversaciones activas</div>
+              )}
+              {sesionesTG.map((sesion, idx) => {
+                const ultimoMsg = sesion.historial?.[sesion.historial.length - 1]
+                const isSel = sesionTGSeleccionada?.chatId === sesion.chatId
+                return (
+                  <div key={sesion.chatId || idx} onClick={() => setSesionTGSeleccionada(sesion)} style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', cursor: 'pointer',
+                    background: isSel ? '#2b5278' : 'transparent', borderBottom: '1px solid #242f3d'
+                  }}>
+                    <div style={{ width: '49px', height: '49px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0, color: 'white', fontWeight: 'bold' }}>
+                      {(sesion.nombre || '?')[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span style={{ color: '#e1e3e6', fontWeight: '500', fontSize: '15px' }}>{sesion.nombre || `Chat ${sesion.chatId}`}</span>
+                        <span style={{ color: '#6d7f8f', fontSize: '12px', flexShrink: 0 }}>
+                          {sesion.ultimaActividad ? new Date(sesion.ultimaActividad).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <div style={{ color: '#6d7f8f', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ultimoMsg ? `${ultimoMsg.rol === 'asistente' ? '\u2713 ' : ''}${(ultimoMsg.mensaje || '').substring(0, 45)}` : 'Sin mensajes'}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Panel derecho: Chat */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0e1621' }}>
+            {!sesionTGSeleccionada ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0e1621', color: '#6d7f8f' }}>
+                <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.5 }}>{'\u2708\ufe0f'}</div>
+                <h3 style={{ color: '#e1e3e6', fontWeight: '300', fontSize: '28px', marginBottom: '10px' }}>Telegram CRM</h3>
+                <p style={{ fontSize: '14px', textAlign: 'center', maxWidth: '400px', lineHeight: '1.6' }}>
+                  Selecciona una conversaci&oacute;n para ver los mensajes.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Chat header */}
+                <div style={{ padding: '10px 16px', background: '#242f3d', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #242f3d' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#2AABEE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: 'white', fontWeight: 'bold' }}>
+                    {(sesionTGSeleccionada.nombre || '?')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ color: '#e1e3e6', fontWeight: '500', fontSize: '16px' }}>{sesionTGSeleccionada.nombre || `Chat ${sesionTGSeleccionada.chatId}`}</div>
+                    <div style={{ color: '#6d7f8f', fontSize: '13px' }}>ID: {sesionTGSeleccionada.chatId}</div>
+                  </div>
+                </div>
+
+                {/* Mensajes */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 60px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {(!sesionTGSeleccionada.historial || sesionTGSeleccionada.historial.length === 0) && (
+                    <div style={{ textAlign: 'center', color: '#6d7f8f', padding: '20px', background: '#1d2733', borderRadius: '8px', margin: '0 auto', fontSize: '13px' }}>
+                      Los mensajes de esta conversaci&oacute;n aparecer&aacute;n aqu&iacute;.
+                    </div>
+                  )}
+                  {sesionTGSeleccionada.historial?.map((msg, i) => {
+                    const esUsuario = msg.rol === 'usuario'
+                    return (
+                      <div key={i} style={{ display: 'flex', justifyContent: esUsuario ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
+                        <div style={{
+                          maxWidth: '65%', padding: '6px 8px 8px 9px',
+                          borderRadius: esUsuario ? '0 8px 8px 8px' : '8px 0 8px 8px',
+                          background: esUsuario ? '#182533' : '#2b5278',
+                          color: '#e1e3e6', fontSize: '14.2px', lineHeight: '1.4',
+                          boxShadow: '0 1px 0.5px rgba(0,0,0,0.13)'
+                        }}>
+                          <span>{msg.mensaje}</span>
+                          <span style={{ float: 'right', fontSize: '11px', color: '#6d7f8f', marginLeft: '10px', marginTop: '3px' }}>
+                            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : ''}
+                            {!esUsuario && ' \u2713'}
                           </span>
                         </div>
                       </div>
