@@ -67,6 +67,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Requerido para webhooks de Twilio
 
+// ─── ANTI-CACHE para rutas /api/* (Railway usa Fastly CDN que puede cachear) ───
+// Esto garantiza que Fastly/Varnish nunca cachee respuestas de la API
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Surrogate-Control', 'no-store');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 // Diagnóstico Global de Peticiones
 app.use((req, res, next) => {
   addMemoryLog('request', {
