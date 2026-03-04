@@ -5,9 +5,66 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import settings from '../settings.js';
+import { calcularModalidad10 } from '../calculadora-mod10.js';
 
 let bot = null;
 const sesiones = new Map();
+
+// ─── HELPERS CALCULADORA MOD10 ───────────────────────────────────────
+
+function detectarCalculoMod10(texto) {
+  const regex = /\[CALCULAR_MOD10\]\s*\{([^}]+)\}/;
+  const match = texto.match(regex);
+  if (!match) return null;
+  try {
+    return JSON.parse('{' + match[1] + '}');
+  } catch (e) {
+    return null;
+  }
+}
+
+function ejecutarCalculoMod10(datos) {
+  try {
+    let zona = (datos.zona || 'centro').toLowerCase();
+    if (zona.includes('fronter')) zona = 'fronteriza';
+    else if (zona.includes('centro') || zona.includes('resto') || zona.includes('pais')) zona = 'centro';
+
+    const resultado = calcularModalidad10({
+      salarioMensual: parseFloat(datos.salarioMensual) || parseFloat(datos.ingreso) || 15000,
+      zona,
+      claseRiesgo: datos.claseRiesgo || 'I',
+      periodoPago: 'mensual'
+    });
+
+    const t = resultado.totalesMensuales;
+    const d = resultado.desglose;
+    const p = resultado.periodos;
+
+    let msg = `🧮 *Cálculo Modalidad 10*\n\n`;
+    msg += `📊 *Tu Cuota Mensual: $${t.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}*\n\n`;
+    msg += `📋 *Desglose:*\n`;
+    msg += `• Cuota fija: $${d.cuotaFija.monto}\n`;
+    msg += `• Excedente: $${(d.excedentePatron.monto + d.excedenteObrero.monto).toFixed(2)}\n`;
+    msg += `• Prestaciones en dinero: $${(d.prestacionesDineroPatron.monto + d.prestacionesDineroObrero.monto).toFixed(2)}\n`;
+    msg += `• Gastos médicos: $${(d.gastoMedicoPatron.monto + d.gastoMedicoObrero.monto).toFixed(2)}\n`;
+    msg += `• Riesgo de trabajo: $${d.riesgoTrabajo.monto}\n`;
+    msg += `• Invalidez y vida: $${(d.invalidezVidaPatron.monto + d.invalidezVidaObrero.monto).toFixed(2)}\n`;
+    msg += `• Guarderías: $${d.guarderias.monto}\n`;
+    msg += `• Retiro: $${d.retiro.monto}\n`;
+    msg += `• Cesantía y vejez: $${(d.cesantiaPatron.monto + d.cesantiaObrero.monto).toFixed(2)}\n\n`;
+    msg += `💰 *Otros períodos:*\n`;
+    msg += `• Bimestral: $${p.bimestral.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\n`;
+    msg += `• Semestral: $${p.semestral.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\n`;
+    msg += `• Anual: $${p.anual.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\n\n`;
+    msg += `📍 Zona: ${zona === 'fronteriza' ? 'Fronteriza' : 'Resto del país'}\n`;
+    msg += `📄 Salario declarado: $${resultado.datos.salarioMensual.toLocaleString('es-MX')} mensuales\n\n`;
+    msg += `¿Te gustaría saber más o calcular con otro monto?`;
+
+    return msg;
+  } catch (error) {
+    return `❌ Error al calcular: ${error.message}\n\n¿Podrías verificar los datos?`;
+  }
+}
 
 // Obtener configuración actual
 function getConfig() {
@@ -252,6 +309,13 @@ export function initTelegram(procesarConIA, validarDocumento) {
         sesion.historial.push({ rol: 'asistente', mensaje: resultado.mensaje, timestamp: Date.now() });
         sesion.ultimaActividad = Date.now();
         if (!sesion.nombre && msg.from?.first_name) sesion.nombre = msg.from.first_name;
+
+        // ─── DETECTAR CÁLCULO MODALIDAD 10 ─────────────────────────
+        const datosMod10 = detectarCalculoMod10(resultado.mensaje);
+        if (datosMod10) {
+          console.log('🧮 [TELEGRAM] Cálculo Mod10 detectado:', datosMod10);
+          resultado.mensaje = ejecutarCalculoMod10(datosMod10);
+        }
 
         // Enviar respuesta
         const opciones = { parse_mode: 'Markdown' };

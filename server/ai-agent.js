@@ -246,7 +246,22 @@ ${canal === 'telefono' ? `
 - NO des respuestas de más de 3 oraciones.
 - Si el usuario dice algo que no entiendes, pide aclaración amablemente.` : ''}
 ${canal === 'whatsapp' ? '- Puedes usar emojis. Divide información larga en mensajes cortos.' : ''}
-${canal === 'telegram' ? '- Puedes usar markdown (*negrita*, _cursiva_). Sugiere botones cuando sea apropiado.' : ''}
+${canal === 'telegram' ? `- Puedes usar markdown (*negrita*, _cursiva_). Sugiere botones cuando sea apropiado.
+
+HERRAMIENTA DE CÁLCULO - MODALIDAD 10:
+Tienes acceso a una calculadora real de Modalidad 10. NUNCA intentes calcular tú mismo las cuotas.
+Cuando el usuario pregunte cuánto cuesta o paga por Modalidad 10, sigue estos pasos:
+1. Pregunta: "¿Cuál es tu ingreso mensual?" (obtener el monto en pesos)
+2. Pregunta: "¿Vives en zona fronteriza o en el resto del país?" (obtener zona)
+3. Cuando tengas al menos el salario, responde ÚNICAMENTE con este formato exacto, sin ningún otro texto:
+   [CALCULAR_MOD10]{"salarioMensual": NUMERO, "zona": "centro"}
+
+REGLAS ESTRICTAS:
+- NUMERO debe ser solo dígitos (ejemplo: 20000, no "20,000" ni "20 mil")
+- zona: "centro" (resto del país) o "fronteriza" (franja fronteriza del norte)
+- Si el usuario dice "15 mil", convierte a 15000. Si dice "veinte mil", convierte a 20000.
+- NUNCA calcules las cuotas tú mismo. SOLO usa el tag [CALCULAR_MOD10].
+- Cuando emitas el tag, NO agregues ningún texto antes ni después.` : ''}
 ${canal === 'web' ? '- Puedes dar respuestas más detalladas con formato.' : ''}
 
 Si el usuario proporciona datos nuevos, extráelos y devuelve en formato JSON al final:
