@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import TwilioPhone from './components/TwilioPhone'
 import CreateVoiceAgent from './components/CreateVoiceAgent'
+import StripeCheckout from './components/StripeCheckout'
 
 function CRM() {
   const [vista, setVista] = useState('dashboard')
@@ -1690,6 +1691,7 @@ function CRM() {
                       value={nuevoPago.metodo}
                       onChange={(e) => setNuevoPago(p => ({ ...p, metodo: e.target.value }))}
                     >
+                      <option value="stripe">💳 Stripe (Tarjeta)</option>
                       <option value="paypal">💳 PayPal</option>
                       <option value="zelle">🏦 Zelle</option>
                       <option value="westernUnion">💵 Western Union</option>
@@ -1767,6 +1769,30 @@ function CRM() {
                   </button>
                 </div>
               </form>
+
+              {/* Formulario de Stripe - reemplaza el form manual cuando se elige tarjeta */}
+              {nuevoPago.metodo === 'stripe' && nuevoPago.monto && (
+                <div style={{ marginTop: '16px', padding: '20px', background: 'rgba(124,58,237,0.05)', borderRadius: '12px', border: '1px solid rgba(124,58,237,0.2)' }}>
+                  <h4 style={{ color: '#a78bfa', margin: '0 0 16px', fontSize: '14px' }}>💳 Pago con Tarjeta vía Stripe</h4>
+                  <StripeCheckout
+                    monto={parseFloat(nuevoPago.monto)}
+                    moneda={nuevoPago.moneda.toLowerCase()}
+                    descripcion={nuevoPago.notaRemitente || 'Servicio IMSS'}
+                    metadata={{
+                      nombreCliente: nuevoPago.nombreRemitente,
+                      emailCliente: nuevoPago.emailRemitente,
+                      referencia: nuevoPago.referencia
+                    }}
+                    onExito={(resultado) => {
+                      mostrarMensaje(`✅ Pago Stripe exitoso: ${resultado.paymentIntentId}`, 'success')
+                      setSubVista(null)
+                      cargarHistorialPagos()
+                      cargarDashboard()
+                    }}
+                    onCancelar={() => setSubVista(null)}
+                  />
+                </div>
+              )}
             </div>
           )}
 

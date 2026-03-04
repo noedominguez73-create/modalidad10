@@ -17,6 +17,7 @@ import { readFileSync, existsSync, writeFileSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as connectivity from './utils/connectivity.js';
+import { crearPaymentIntent, obtenerConfig as stripeConfig, procesarWebhook as stripeWebhook } from './channels/stripe.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,11 +65,19 @@ app.post('/api/debug/logs/clear', (req, res) => {
 });
 
 app.use(cors());
+
+// ⚡ STRIPE WEBHOOK — express.raw() ANTES del json (Stripe necesita el body raw para validar firma)
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Requerido para webhooks de Twilio
 
 // ─── ANTI-CACHE para rutas /api/* (Railway usa Fastly CDN que puede cachear) ───
 // Esto garantiza que Fastly/Varnish nunca cachee respuestas de la API
+// ─── RUTAS DE STRIPE ──────────────────────────────────────────────────────────
+app.get('/api/stripe/config', stripeConfig);
+app.post('/api/stripe/payment-intent', crearPaymentIntent);
+
 app.use('/api', (req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Surrogate-Control', 'no-store');
