@@ -3,10 +3,9 @@ nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = [
-  "npm install --prefer-offline",
+  "npm install",
   "cd client && npm install --omit=none"
 ]
-cacheDirectories = ["node_modules", ".npm"]
 
 [phases.build]
 cmds = ["cd client && npm run build"]
