@@ -81,6 +81,29 @@ app.use((req, res, next) => {
   });
   next();
 });
+// ─── FACEBOOK WEBHOOK — RUTA ULTRA-TEMPRANA (antes del static) ───────────────
+// Meta verifica con GET /api/facebook/webhook — debe responder con hub.challenge
+// Esta ruta está aquí arriba para evitar que express.static o el fallback SPA la intercepten
+app.get('/api/facebook/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  console.log(`[FB-EARLY] Verificación recibida: mode=${mode} token=${token}`);
+
+  // Token por defecto hardcoded como respaldo (se puede sobreescribir con env var)
+  const verifyToken = (process.env.FACEBOOK_VERIFY_TOKEN || 'asesoriaimss_verify_2024').trim();
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log('✅ [FB-EARLY] Webhook verificado por Meta — respondiendo con challenge');
+    return res.status(200).send(challenge);
+  }
+
+  // Token no coincide — rechazar
+  console.log(`❌ [FB-EARLY] Token no coincide: esperado="${verifyToken}" recibido="${token}"`);
+  return res.status(403).send('Forbidden');
+});
+
 app.use(express.static('client/dist'));
 
 // INICIO INMEDIATO DEL SERVIDOR (Para Health Check de Railway)
