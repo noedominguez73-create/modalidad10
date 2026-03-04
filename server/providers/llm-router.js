@@ -33,7 +33,7 @@ export function refreshConfig() {
  */
 async function callGemini(messages, options) {
   const apiKey = options.apiKey || getProviderApiKey('llm', 'gemini');
-  const model = options.model || 'gemini-1.5-flash';
+  const model = options.model || 'gemini-2.0-flash';
 
   const systemMsg = messages.find(m => m.role === 'system')?.content || '';
   const userMsgs = messages.filter(m => m.role !== 'system');

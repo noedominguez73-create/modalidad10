@@ -170,6 +170,16 @@ export function obtenerTelegram() {
 }
 
 /**
+ * Obtener config de Facebook Messenger (SOLO de env vars)
+ */
+export function obtenerFacebook() {
+  return {
+    pageToken: (process.env.FACEBOOK_PAGE_TOKEN || '').replace(/\s+/g, ''),
+    verifyToken: (process.env.FACEBOOK_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'asesoriaimss_verify_2024').trim()
+  };
+}
+
+/**
  * Obtener API Keys (SOLO de env vars)
  */
 export function obtenerApiKeys() {
@@ -608,6 +618,7 @@ export default {
   obtenerTwilio,
   obtenerTwilioFullConfig,
   obtenerTelegram,
+  obtenerFacebook,
   obtenerApiKeys,
   obtenerApiKeysVoz,
   guardarApiKeysVoz,

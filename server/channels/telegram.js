@@ -10,6 +10,27 @@ import { calcularModalidad10 } from '../calculadora-mod10.js';
 let bot = null;
 const sesiones = new Map();
 
+// Lazy import de ai-agent para evitar problemas de referencia
+let _aiAgent = null;
+async function getProcessarConIA() {
+  if (!_aiAgent) {
+    _aiAgent = await import('../ai-agent.js');
+  }
+  return _aiAgent.default?.procesarConIA || _aiAgent.procesarConIA;
+}
+
+let _docValidator = null;
+async function getValidarDocumento() {
+  if (!_docValidator) {
+    try {
+      _docValidator = await import('../documents/validator.js');
+    } catch (e) {
+      return null;
+    }
+  }
+  return _docValidator.default?.validarDocumento || _docValidator.validarDocumento;
+}
+
 // ─── HELPERS CALCULADORA MOD10 ───────────────────────────────────────
 
 function detectarCalculoMod10(texto) {
@@ -71,7 +92,7 @@ function getConfig() {
   return settings.obtenerTelegram();
 }
 
-export async function initTelegram(procesarConIA, validarDocumento) {
+export async function initTelegram() {
   const config = getConfig();
 
   if (!config.botToken) {
@@ -268,15 +289,19 @@ export async function initTelegram(procesarConIA, validarDocumento) {
           const fileId = msg.document.file_id;
           const fileLink = await bot.getFileLink(fileId);
 
-          const resultado = await validarDocumento({
-            url: fileLink,
-            tipo: msg.document.mime_type,
-            nombre: msg.document.file_name,
-            chatId,
-            sesion
-          });
-
-          await bot.sendMessage(chatId, resultado.mensaje, { parse_mode: 'Markdown' });
+          const validarDocumento = await getValidarDocumento();
+          if (validarDocumento) {
+            const resultado = await validarDocumento({
+              url: fileLink,
+              tipo: msg.document.mime_type,
+              nombre: msg.document.file_name,
+              chatId,
+              sesion
+            });
+            await bot.sendMessage(chatId, resultado.mensaje, { parse_mode: 'Markdown' });
+          } else {
+            await bot.sendMessage(chatId, 'Recibí tu documento pero el validador no está disponible.');
+          }
           return;
         }
 
@@ -287,18 +312,24 @@ export async function initTelegram(procesarConIA, validarDocumento) {
           const foto = msg.photo[msg.photo.length - 1]; // Mejor calidad
           const fileLink = await bot.getFileLink(foto.file_id);
 
-          const resultado = await validarDocumento({
-            url: fileLink,
-            tipo: 'image/jpeg',
-            chatId,
-            sesion
-          });
-
-          await bot.sendMessage(chatId, resultado.mensaje, { parse_mode: 'Markdown' });
+          const validarDocumento = await getValidarDocumento();
+          if (validarDocumento) {
+            const resultado = await validarDocumento({
+              url: fileLink,
+              tipo: 'image/jpeg',
+              chatId,
+              sesion
+            });
+            await bot.sendMessage(chatId, resultado.mensaje, { parse_mode: 'Markdown' });
+          } else {
+            await bot.sendMessage(chatId, 'Recibí tu imagen pero el validador no está disponible.');
+          }
           return;
         }
 
-        // Mensaje de texto normal
+        // Mensaje de texto normal — usar lazy import
+        const procesarConIA = await getProcessarConIA();
+        if (!procesarConIA) throw new Error('AI agent no disponible');
         const resultado = await procesarConIA(msg.text, {
           canal: 'telegram',
           chatId,

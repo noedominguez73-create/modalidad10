@@ -510,11 +510,12 @@ app.post('/api/db/recargar', (req, res) => {
 // ============================================
 
 // Importar módulos de canales (lazy loading para evitar errores si no están configurados)
-let twilioVoice, whatsapp, telegram, aiAgent, documentValidator;
+let twilioVoice, whatsapp, telegram, facebook, aiAgent, documentValidator;
 let canalesActivos = {
   twilio: false,
   whatsapp: false,
   telegram: false,
+  facebook: false,
   deepgram: false,
   llm: false
 };
@@ -569,15 +570,22 @@ async function initChannels() {
     canalesActivos.whatsapp = false;
   }
 
+  // Cargar Facebook Messenger
+  try {
+    facebook = await import('./channels/facebook.js');
+    const ok = facebook.default.initFacebook();
+    canalesActivos.facebook = !!ok;
+  } catch (e) {
+    console.log('⚠ Facebook Messenger no disponible:', e.message);
+    canalesActivos.facebook = false;
+  }
+
   // Cargar Telegram (con delay LARGO para evitar conflicto con instancia anterior en Railway)
   setTimeout(async () => {
     try {
       telegram = await import('./channels/telegram.js');
       console.log('⏳ Esperando para iniciar Telegram...');
-      const ok = telegram.default.initTelegram(
-        aiAgent.procesarMensaje,
-        documentValidator.default.validarDocumento
-      );
+      const ok = await telegram.default.initTelegram();
       canalesActivos.telegram = !!ok;
     } catch (e) {
       console.log('⚠ Telegram no disponible:', e.message);
@@ -587,20 +595,22 @@ async function initChannels() {
 }
 
 // Manejo de señales para cierre limpio (evita que Railway mate el proceso)
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM recibido — cerrando servidor limpiamente...');
+const gracefulShutdownMain = (signal) => {
+  console.log(`🛑 ${signal} recibido — cerrando servidor limpiamente...`);
+  // Detener Telegram polling
+  if (telegram && telegram.default && telegram.default.stopTelegram) {
+    try { telegram.default.stopTelegram(); } catch (e) { /* ignore */ }
+  }
   server.close(() => {
     console.log('✅ Servidor cerrado.');
     process.exit(0);
   });
   // Forzar cierre después de 5s si no se cierra solo
   setTimeout(() => process.exit(0), 5000);
-});
+};
 
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT recibido — cerrando...');
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdownMain('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdownMain('SIGINT'));
 
 // Evitar que errores no manejados maten el proceso
 process.on('uncaughtException', (err) => {
@@ -797,6 +807,68 @@ app.get('/api/telegram/sesiones', (req, res) => {
     res.json({ success: true, data: sesiones });
   } catch (err) {
     console.error('Error obteniendo sesiones Telegram:', err);
+    res.json({ success: true, data: [] });
+  }
+});
+
+// ─── FACEBOOK MESSENGER (Meta Graph API) ─────────────────────────────
+
+// GET: Verificación del webhook (Meta lo requiere al configurar)
+app.get('/api/facebook/webhook', (req, res) => {
+  if (!facebook) {
+    return res.status(200).send(req.query['hub.challenge'] || 'OK');
+  }
+  facebook.default.verificarWebhook(req, res);
+});
+
+// POST: Mensajes entrantes de Facebook Messenger
+app.post('/api/facebook/webhook', async (req, res) => {
+  console.log(`💬 [FACEBOOK] Webhook recibido:`, JSON.stringify(req.body).substring(0, 200));
+
+  if (!facebook) {
+    console.error('❌ Facebook no está cargado');
+    return res.status(200).send('EVENT_RECEIVED');
+  }
+
+  try {
+    await facebook.default.handleIncomingMessage(req, res);
+  } catch (err) {
+    console.error('❌ Error en webhook Facebook:', err);
+    if (!res.headersSent) res.status(200).send('EVENT_RECEIVED');
+  }
+});
+
+// Enviar mensaje proactivo de Facebook desde el CRM
+app.post('/api/facebook/enviar', async (req, res) => {
+  const { recipientId, mensaje } = req.body;
+
+  if (!recipientId || !mensaje) {
+    return res.status(400).json({ success: false, error: 'Falta recipientId o mensaje' });
+  }
+
+  if (!facebook) {
+    return res.status(503).json({ success: false, error: 'Facebook no está configurado' });
+  }
+
+  try {
+    const msgId = await facebook.default.enviarMensaje(recipientId, mensaje);
+    res.json({ success: true, messageId: msgId, message: 'Mensaje enviado' });
+  } catch (err) {
+    console.error('❌ Error enviando Facebook:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Obtener todas las sesiones/conversaciones activas de Facebook
+app.get('/api/facebook/sesiones', (req, res) => {
+  if (!facebook) {
+    return res.json({ success: true, data: [] });
+  }
+  try {
+    const sesiones = facebook.default.obtenerSesionesActivas();
+    res.json({ success: true, data: sesiones });
+  } catch (err) {
+    console.error('Error obteniendo sesiones Facebook:', err);
     res.json({ success: true, data: [] });
   }
 });
@@ -2272,21 +2344,4 @@ app.get('*', (req, res) => {
   res.sendFile(join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
-// Manejo de cierre limpio (Railway SIGTERM)
-const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} recibido.Cerrando servicios...`);
-
-  // Detener Telegram polling
-  if (telegram && telegram.default && telegram.default.stopTelegram) {
-    try {
-      telegram.default.stopTelegram();
-    } catch (e) {
-      // Ignorar errores
-    }
-  }
-
-  process.exit(0);
-};
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// (Graceful shutdown consolidado arriba en gracefulShutdownMain)
