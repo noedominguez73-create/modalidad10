@@ -71,7 +71,7 @@ function getConfig() {
   return settings.obtenerTelegram();
 }
 
-export function initTelegram(procesarConIA, validarDocumento) {
+export async function initTelegram(procesarConIA, validarDocumento) {
   const config = getConfig();
 
   if (!config.botToken) {
@@ -97,6 +97,15 @@ export function initTelegram(procesarConIA, validarDocumento) {
   }
 
   try {
+    // Limpiar webhook/polling anterior para evitar conflicto 409
+    try {
+      const deleteRes = await fetch(`https://api.telegram.org/bot${config.botToken}/deleteWebhook?drop_pending_updates=false`);
+      const deleteData = await deleteRes.json();
+      console.log('🔄 Telegram: deleteWebhook:', deleteData.ok ? 'OK' : deleteData.description);
+    } catch (e) {
+      console.log('⚠ No se pudo limpiar webhook anterior:', e.message);
+    }
+
     bot = new TelegramBot(config.botToken, {
       polling: {
         autoStart: true,
