@@ -15,7 +15,7 @@ export const LLM_PROVIDERS = {
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', speed: 'medium' },
       { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', speed: 'fast' }
     ],
-    defaultModel: 'gemini-1.5-flash',
+    defaultModel: 'gemini-2.0-flash',
     latency: '800-1500ms',
     costTier: 'low'
   },
@@ -247,7 +247,7 @@ export const DEFAULT_PROVIDER_CONFIG = {
       voice: 'groq'
     },
     models: {
-      gemini: 'gemini-1.5-flash',
+      gemini: 'gemini-2.0-flash',
       anthropic: 'claude-3-5-sonnet-20241022',
       openai: 'gpt-4o-mini',
       groq: 'llama-3.3-70b-versatile',
