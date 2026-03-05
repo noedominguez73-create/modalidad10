@@ -3,67 +3,13 @@
  * Sistema CRM para clientes IMSS en Estados Unidos
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { cargarCRM as cargarDB, guardarCRM as guardarDB, validadores } from '../shared/db-utils.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const DB_PATH = join(__dirname, '..', '..', 'database', 'clientes-prospectos.json');
-
-// Cargar base de datos
-function cargarDB() {
-  try {
-    if (existsSync(DB_PATH)) {
-      return JSON.parse(readFileSync(DB_PATH, 'utf8'));
-    }
-  } catch (e) {
-    console.error('Error cargando DB:', e.message);
-  }
-  return { prospectos: [], clientes: [], pagosRecibidos: [], pagosIMSS: [], verificacionesVigencia: [] };
-}
-
-// Guardar base de datos
-function guardarDB(db) {
-  try {
-    writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
-    return true;
-  } catch (e) {
-    console.error('Error guardando DB:', e.message);
-    return false;
-  }
-}
-
-// Validar CURP (formato básico)
-function validarCURP(curp) {
-  if (!curp) return { valido: false, mensaje: 'CURP requerido' };
-  const regex = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[0-9A-Z]\d$/;
-  if (!regex.test(curp.toUpperCase())) {
-    return { valido: false, mensaje: 'Formato de CURP inválido' };
-  }
-  return { valido: true };
-}
-
-// Validar NSS (11 dígitos)
-function validarNSS(nss) {
-  if (!nss) return { valido: false, mensaje: 'NSS requerido' };
-  const regex = /^\d{11}$/;
-  if (!regex.test(nss)) {
-    return { valido: false, mensaje: 'NSS debe tener 11 dígitos' };
-  }
-  return { valido: true };
-}
-
-// Validar teléfono USA
-function validarTelefonoUSA(telefono) {
-  if (!telefono) return { valido: false, mensaje: 'Teléfono requerido' };
-  const limpio = telefono.replace(/\D/g, '');
-  if (limpio.length === 10 || (limpio.length === 11 && limpio.startsWith('1'))) {
-    return { valido: true, formato: '+1' + limpio.slice(-10) };
-  }
-  return { valido: false, mensaje: 'Formato de teléfono USA inválido' };
-}
+// Alias para validadores
+const validarCURP = validadores.curp;
+const validarNSS = validadores.nss;
+const validarTelefonoUSA = validadores.telefonoUSA;
 
 /**
  * Crear nuevo prospecto

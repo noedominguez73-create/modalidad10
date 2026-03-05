@@ -11,12 +11,12 @@
  */
 
 import settings from '../settings.js';
+import { SessionMap } from '../shared/session-store.js';
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0';
 
-// Sesiones de conversación (en memoria, en producción usar Redis)
-const sesiones = new Map();
-setInterval(() => limpiarSesionesInactivas(), 3600000); // Limpiar cada hora
+// Sesiones con LRU Cache (máximo 5000, TTL 1 hora)
+const sesiones = new SessionMap('whatsapp', { max: 5000, ttl: 1000 * 60 * 60 });
 
 // ─── Configuración ───────────────────────────────────────────────────
 
@@ -58,18 +58,13 @@ function obtenerSesion(telefono) {
   return sesion;
 }
 
-function limpiarSesionesInactivas(maxInactividadMs = 3600000) {
-  const ahora = Date.now();
-  for (const [telefono, sesion] of sesiones) {
-    if (ahora - sesion.ultimaActividad > maxInactividadMs) {
-      sesiones.delete(telefono);
-      console.log(`[WA] Sesión expirada: ${telefono}`);
-    }
-  }
-}
+// limpiarSesionesInactivas ya no es necesario - LRU Cache lo maneja automáticamente
 
 function obtenerSesionesActivas() {
-  return Array.from(sesiones.values());
+  return Array.from(sesiones.values()).map(s => ({
+    ...s,
+    canal: 'whatsapp'
+  }));
 }
 
 // ─── Verificación del Webhook (Meta requiere esto al configurar) ─────

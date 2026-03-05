@@ -6,9 +6,10 @@
 import TelegramBot from 'node-telegram-bot-api';
 import settings from '../settings.js';
 import { calcularModalidad10 } from '../calculadora-mod10.js';
+import { SessionMap } from '../shared/session-store.js';
 
 let bot = null;
-const sesiones = new Map();
+const sesiones = new SessionMap('telegram', { max: 5000, ttl: 1000 * 60 * 60 });
 
 // Lazy import de ai-agent para evitar problemas de referencia
 let _aiAgent = null;

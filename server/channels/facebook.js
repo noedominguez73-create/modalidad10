@@ -10,12 +10,12 @@
  */
 
 import settings from '../settings.js';
+import { SessionMap } from '../shared/session-store.js';
 
 const GRAPH_API = 'https://graph.facebook.com/v21.0';
 
-// Sesiones de conversación (en memoria)
-const sesiones = new Map();
-setInterval(() => limpiarSesionesInactivas(), 3600000);
+// Sesiones con LRU Cache (máximo 5000, TTL 1 hora)
+const sesiones = new SessionMap('facebook', { max: 5000, ttl: 1000 * 60 * 60 });
 
 // Lazy import de ai-agent (mismo patrón que telegram.js)
 let _aiAgent = null;
@@ -59,15 +59,7 @@ function obtenerSesion(senderId) {
     return sesion;
 }
 
-function limpiarSesionesInactivas(maxInactividadMs = 3600000) {
-    const ahora = Date.now();
-    for (const [id, sesion] of sesiones) {
-        if (ahora - sesion.ultimaActividad > maxInactividadMs) {
-            sesiones.delete(id);
-            console.log(`[FB] Sesión expirada: ${id}`);
-        }
-    }
-}
+// limpiarSesionesInactivas ya no es necesario - LRU Cache lo maneja automáticamente
 
 function obtenerSesionesActivas() {
     return Array.from(sesiones.values());
@@ -277,6 +269,5 @@ export default {
     handleIncomingMessage,
     enviarMensaje,
     obtenerSesion,
-    obtenerSesionesActivas,
-    limpiarSesionesInactivas
+    obtenerSesionesActivas
 };

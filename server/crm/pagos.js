@@ -3,38 +3,9 @@
  * Match de pagos recibidos con clientes
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { obtenerClientes, obtenerClientePorId, registrarPagoCliente } from './clientes.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const DB_PATH = join(__dirname, '..', '..', 'database', 'clientes-prospectos.json');
-
-// Cargar base de datos
-function cargarDB() {
-  try {
-    if (existsSync(DB_PATH)) {
-      return JSON.parse(readFileSync(DB_PATH, 'utf8'));
-    }
-  } catch (e) {
-    console.error('Error cargando DB:', e.message);
-  }
-  return { prospectos: [], clientes: [], pagosRecibidos: [], pagosIMSS: [], verificacionesVigencia: [] };
-}
-
-// Guardar base de datos
-function guardarDB(db) {
-  try {
-    writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
-    return true;
-  } catch (e) {
-    console.error('Error guardando DB:', e.message);
-    return false;
-  }
-}
+import { cargarCRM as cargarDB, guardarCRM as guardarDB } from '../shared/db-utils.js';
 
 /**
  * Registrar pago recibido (antes de hacer match)

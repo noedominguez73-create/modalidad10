@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { calcularModalidad40, validarElegibilidadMod40 } from './calculadora.js';
 import { calcularModalidad10, CLASES_RIESGO, obtenerDivisiones, PERIODOS, LIMITES_SALARIO } from './calculadora-mod10.js';
 import { calcularModalidad33, GRUPOS_EDAD } from './calculadora-mod33.js';
@@ -64,7 +65,50 @@ app.post('/api/debug/logs/clear', (req, res) => {
   res.json({ success: true, message: 'Logs limpiados' });
 });
 
-app.use(cors());
+// ─── CORS RESTRICTIVO ─────────────────────────────────────────────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (mobile apps, Postman, webhooks)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    callback(new Error('CORS no permitido'));
+  },
+  credentials: true
+}));
+
+// ─── RATE LIMITING ────────────────────────────────────────────────────────────
+// Limiter general: 100 requests por minuto
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Demasiadas solicitudes, intenta en 1 minuto' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Excluir webhooks de rate limiting
+    return req.path.includes('/webhook') || req.path === '/health';
+  }
+});
+
+// Limiter para IA: 20 requests por minuto (más costoso)
+const iaLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Límite de solicitudes IA alcanzado, espera 1 minuto' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Aplicar rate limiters
+app.use('/api/', generalLimiter);
+app.use('/api/agente/', iaLimiter);
+app.use('/api/providers/test/', iaLimiter);
 
 // ⚡ STRIPE WEBHOOK — express.raw() ANTES del json (Stripe necesita el body raw para validar firma)
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
