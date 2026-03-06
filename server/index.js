@@ -1234,20 +1234,6 @@ app.get('/api/agentes/:id/test-calls', (req, res) => {
   }
 });
 
-// --- WHATSAPP ---
-
-// Webhook: Mensaje entrante de WhatsApp
-app.post('/api/whatsapp/webhook', async (req, res) => {
-  if (!whatsapp || !aiAgent || !documentValidator) {
-    return res.status(503).send('WhatsApp no configurado');
-  }
-  await whatsapp.default.handleIncomingMessage(
-    req, res,
-    aiAgent.default.procesarConIA,
-    documentValidator.default.validarDocumento
-  );
-});
-
 // --- CHAT WEB ---
 
 // Procesar mensaje del chat web

@@ -350,6 +350,5 @@ export default {
   enviarImagen,
   enviarDocumento,
   obtenerSesion,
-  limpiarSesionesInactivas,
   obtenerSesionesActivas
 };
