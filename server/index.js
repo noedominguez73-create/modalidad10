@@ -26,6 +26,9 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3040;
 
+// Railway/Heroku usan proxy reverso — necesario para rate-limit y obtener IP real
+app.set('trust proxy', 1);
+
 // ============================================
 // DIAGNÓSTICO NUCLEAR (AL INICIO)
 // ============================================
